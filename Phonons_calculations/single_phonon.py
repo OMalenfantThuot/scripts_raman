@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-from tabulate import tabulate
 import sys
 
 sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
@@ -8,9 +7,10 @@ sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
 from mybigdft import Job, Posinp, InputParams
 from mybigdft.workflows import Geopt, Phonons, InfraredSpectrum
 import utils
+from numpy import save
 
 
-def single_phonon_calculation(nmpi=1, nomp=1):
+def single_phonon_calculation(nmpi=1, nomp=1, savefile=True):
     input_file_is_present, posinp_file_is_present, jobname = (
         utils.prepare_calculations()
     )
@@ -48,6 +48,9 @@ def single_phonon_calculation(nmpi=1, nomp=1):
 
     print("Phonons energies:")
     print(phonons.energies)
+
+    if savefile:
+        save("phonons/ph_energies.npy", phonons.energies)
 
 
 if __name__ == "__main__":
