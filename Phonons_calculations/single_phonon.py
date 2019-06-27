@@ -16,7 +16,7 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True):
             utils.prepare_calculations()
         )
 
-        #Cette partie devrait être dans prepare_calculations
+        # Cette partie devrait être dans prepare_calculations
         if input_file_is_present:
             base_inp = InputParams.from_file("input.yaml")
         else:
@@ -33,7 +33,7 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True):
     base_job = Job(posinp=ref_pos, inputparams=base_inp, name=jobname, run_dir="geopt/")
 
     geopt = Geopt(base_job)
-    geopt.run(nmpi=2, nomp=1)
+    geopt.run(nmpi=nmpi, nomp=1, restart_if_incomplete=True)
 
     relaxed_pos = geopt.final_posinp
     if "output" in base_inp:
@@ -47,7 +47,7 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True):
         ref_data_dir=geopt.queue[0].data_dir,
     )
     phonons = Phonons(ground_state)
-    phonons.run(nmpi=2, nomp=1, restart_if_incomplete=True)
+    phonons.run(nmpi=nmpi, nomp=1, restart_if_incomplete=True)
 
     print("Phonons energies:")
     print(phonons.energies)

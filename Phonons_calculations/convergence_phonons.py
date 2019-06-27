@@ -15,7 +15,7 @@ def convergence_phonons(rmult_list, hgrid_list, nmpi=1, nomp=1, savefile=True):
         utils.prepare_calculations()
     )
 
-    #Cette partie devrait être dans prepare_calculations
+    # Cette partie devrait être dans prepare_calculations
     if input_file_is_present:
         base_inp = InputParams.from_file("input.yaml")
     else:
@@ -53,4 +53,4 @@ if __name__ == "__main__":
     rmults = [[5, 8], [6, 9], [7, 10], [8, 11]]
     hgrids = [0.50, 0.45, 0.40, 0.35, 0.30, 0.25, 0.20]
 
-    convergence_phonons(rmult_list=rmults, hgrid_list=hgrids, nmpi=2)
+    convergence_phonons(rmult_list=rmults, hgrid_list=hgrids, nmpi=12)
