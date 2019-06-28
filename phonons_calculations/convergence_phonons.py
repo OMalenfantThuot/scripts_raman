@@ -3,7 +3,7 @@
 import sys
 
 sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
-from single_phonon import single_phonon_calculation
+from phonons_calculations import single_phonon_calculation
 import os
 from shutil import copyfile
 import utils
@@ -58,7 +58,7 @@ def convergence_phonons(rmult_list, hgrid_list, nmpi=1, nomp=1, savefile=True):
                     rmult[0], rmult[1], hgrid
                 )
                 results[i][j] = np.load(datadir + "ph_energies.npy")
-        np.save(jobname+"_ph_energies.npy", results)
+        np.save(jobname + "_ph_energies.npy", results)
 
 
 if __name__ == "__main__":
