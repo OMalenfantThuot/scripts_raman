@@ -10,7 +10,9 @@ import utils
 from numpy import save
 
 
-def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False):
+def single_phonon_calculation(
+    nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False
+):
     if preparation:
         input_file_is_present, posinp_file_is_present, jobname = (
             utils.prepare_calculations()
@@ -30,7 +32,13 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True, p
         else:
             raise ValueError("No atomic positions are available.")
 
-    base_job = Job(posinp=ref_pos, inputparams=base_inp, name=jobname, run_dir="geopt/", pseudos=pseudos)
+    base_job = Job(
+        posinp=ref_pos,
+        inputparams=base_inp,
+        name=jobname,
+        run_dir="geopt/",
+        pseudos=pseudos,
+    )
 
     geopt = Geopt(base_job)
     geopt.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
@@ -45,7 +53,7 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True, p
         inputparams=base_inp,
         run_dir="phonons/",
         ref_data_dir=geopt.queue[0].data_dir,
-        pseudos=pseudos
+        pseudos=pseudos,
     )
     phonons = Phonons(ground_state)
     phonons.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)

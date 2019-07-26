@@ -11,7 +11,9 @@ from mybigdft import InputParams, Posinp
 import numpy as np
 
 
-def convergence_phonons(rmult_list, hgrid_list, nmpi=1, nomp=1, savefile=True, pseudos=False):
+def convergence_phonons(
+    rmult_list, hgrid_list, nmpi=1, nomp=1, savefile=True, pseudos=False
+):
     input_file_is_present, posinp_file_is_present, jobname = (
         utils.prepare_calculations()
     )
@@ -46,7 +48,9 @@ def convergence_phonons(rmult_list, hgrid_list, nmpi=1, nomp=1, savefile=True, p
             base_inp["output"] = {"orbitals": "binary"}
             base_inp.write("input.yaml")
 
-            single_phonon_calculation(nmpi=nmpi, nomp=nomp, savefile=savefile, pseudos=pseudos)
+            single_phonon_calculation(
+                nmpi=nmpi, nomp=nomp, savefile=savefile, pseudos=pseudos
+            )
             os.chdir("../../")
 
     # Temporary solution, should probably be done in sqlite
