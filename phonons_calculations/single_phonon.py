@@ -10,7 +10,7 @@ import utils
 from numpy import save
 
 
-def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True):
+def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False):
     if preparation:
         input_file_is_present, posinp_file_is_present, jobname = (
             utils.prepare_calculations()
@@ -30,10 +30,10 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True):
         else:
             raise ValueError("No atomic positions are available.")
 
-    base_job = Job(posinp=ref_pos, inputparams=base_inp, name=jobname, run_dir="geopt/")
+    base_job = Job(posinp=ref_pos, inputparams=base_inp, name=jobname, run_dir="geopt/", pseudos=pseudos)
 
     geopt = Geopt(base_job)
-    geopt.run(nmpi=nmpi, nomp=1, restart_if_incomplete=True)
+    geopt.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
 
     relaxed_pos = geopt.final_posinp
     if "output" in base_inp:
@@ -45,9 +45,10 @@ def single_phonon_calculation(nmpi=1, nomp=1, preparation=True, savefile=True):
         inputparams=base_inp,
         run_dir="phonons/",
         ref_data_dir=geopt.queue[0].data_dir,
+        pseudos=pseudos
     )
     phonons = Phonons(ground_state)
-    phonons.run(nmpi=nmpi, nomp=1, restart_if_incomplete=True)
+    phonons.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
 
     print("Phonons energies:")
     print(phonons.energies)
