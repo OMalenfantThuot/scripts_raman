@@ -43,8 +43,11 @@ def convergence_phonons(
             copyfile(jobname + ".xyz", os.path.join(base_dir, jobname + ".xyz"))
 
             os.chdir(base_dir)
-            base_inp["dft"]["rmult"] = rmult
-            base_inp["dft"]["hgrids"] = hgrid
+            try:
+                base_inp["dft"]["rmult"] = rmult
+                base_inp["dft"]["hgrids"] = hgrid
+            except KeyError:
+                base_inp["dft"] = {"rmult": rmult, "hgrids": hgrid}
             base_inp["output"] = {"orbitals": "binary"}
             base_inp.write("input.yaml")
 
