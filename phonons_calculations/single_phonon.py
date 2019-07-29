@@ -40,7 +40,7 @@ def single_phonon_calculation(
         pseudos=pseudos,
     )
 
-    geopt = Geopt(base_job)
+    geopt = Geopt(base_job, forcemax=2e-5, ncount_cluster_x=50)
     geopt.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
 
     relaxed_pos = geopt.final_posinp
