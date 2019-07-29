@@ -14,24 +14,7 @@ import numpy as np
 def convergence_phonons(
     rmult_list, hgrid_list, nmpi=1, nomp=1, savefile=True, pseudos=False
 ):
-    input_file_is_present, posinp_file_is_present, jobname = (
-        utils.prepare_calculations()
-    )
-
-    # Cette partie devrait être dans prepare_calculations
-    if input_file_is_present:
-        base_inp = InputParams.from_file("input.yaml")
-    else:
-        base_inp = InputParams()
-
-    if posinp_file_is_present:
-        ref_pos = Posinp.from_file(jobname + ".xyz")
-    elif base_inp.posinp is not None:
-        ref_pos = base_inp.posinp
-        jobname = "jobname"
-        ref_pos.write(jobname + ".xyz")
-    else:
-        raise ValueError("No atomic positions are available.")
+    base_inp, ref_pos, jobname = utils.prepare_calculations()
 
     for rmult in rmult_list:
         for hgrid in hgrid_list:

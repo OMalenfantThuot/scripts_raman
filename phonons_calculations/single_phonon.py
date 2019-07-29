@@ -14,23 +14,7 @@ def single_phonon_calculation(
     nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False
 ):
     if preparation:
-        input_file_is_present, posinp_file_is_present, jobname = (
-            utils.prepare_calculations()
-        )
-
-        # Cette partie devrait être dans prepare_calculations
-        if input_file_is_present:
-            base_inp = InputParams.from_file("input.yaml")
-        else:
-            base_inp = InputParams()
-
-        if posinp_file_is_present:
-            ref_pos = Posinp.from_file(jobname + ".xyz")
-        elif base_inp.posinp is not None:
-            ref_pos = base_inp.posinp
-            jobname = "jobname"
-        else:
-            raise ValueError("No atomic positions are available.")
+        base_inp, ref_pos, jobname = utils.prepare_calculations()
 
     base_job = Job(
         posinp=ref_pos,
@@ -45,8 +29,8 @@ def single_phonon_calculation(
 
     relaxed_pos = geopt.final_posinp
     if "output" in base_inp:
-        # No need to write wavefunctions on disk anymore
         del base_inp["output"]
+
     ground_state = Job(
         name=jobname,
         posinp=relaxed_pos,
