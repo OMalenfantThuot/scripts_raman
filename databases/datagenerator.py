@@ -75,7 +75,7 @@ class DataGenerator:
                 try:
                     log = Logfile.from_file("log-" + jobname + ".yaml")
                     print("Calculation {:06} was complete.\n".format(i))
-                except ValueError:
+                except:
                     pos = self._generate_random_structure()
                     job = Job(
                         name=jobname,
