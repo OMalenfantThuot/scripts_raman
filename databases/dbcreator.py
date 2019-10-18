@@ -1,5 +1,6 @@
 import os
 import ase
+import sys
 from ase.db import connect
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
@@ -43,3 +44,8 @@ class DbCreator:
             self._dbname = dbname
         else:
             self._dbname = dbname + ".db"
+
+
+if __name__ == "__main__":
+    dbc = DbCreator(name=sys.argv[1])
+    dbc.create()
