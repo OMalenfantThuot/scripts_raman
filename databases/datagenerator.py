@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 from mybigdft import Posinp, InputParams, Job, Logfile
+from mybigdft.workflows import Geopt
 from shutil import rmtree, copyfile
 from copy import deepcopy
 import numpy as np
@@ -10,8 +11,9 @@ import os
 
 class DataGenerator:
     r"""
+    Drives DFT calculations by moving atoms around the equilibrium
+    positions.
     """
-
     def __init__(self):
         self.parser = self._create_parser()
         args = self.parser.parse_args()
@@ -56,7 +58,15 @@ class DataGenerator:
         jobname = self.name.split(".")[0]
 
         os.chdir("run_dir/")
-        for i in range(self.n_structs):
+        os.makedirs("geopt/", exist_ok=True)
+        os.chdir("geopt/")
+        job = Job(name=jobname, posinp=self.initpos, inputparams=self.input, pseudos=self.pseudos)
+        geopt = Geopt(job, forcemax=1e-04)
+        geopt.run(nmpi=self.nmpi)
+        copyfile("final_{}.xyz".format(jobname), "../../saved_results/000000.xyz")
+        self.initpos = geopt.final_posinp
+        os.chdir("../")
+        for i in range(1, self.n_structs):
             try:
                 os.makedirs("{}_{:06}".format(jobname, i))
                 os.chdir("{}_{:06}".format(jobname, i))
