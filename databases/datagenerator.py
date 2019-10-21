@@ -14,6 +14,7 @@ class DataGenerator:
     Drives DFT calculations by moving atoms around the equilibrium
     positions.
     """
+
     def __init__(self):
         self.parser = self._create_parser()
         args = self.parser.parse_args()
@@ -27,7 +28,7 @@ class DataGenerator:
                 break
             except:
                 continue
-        self.pseudos = args.pseudos
+        self.pseudos = args.no_pseudos
         self.nmpi = args.nmpi
 
     def _create_parser(self):
@@ -39,7 +40,7 @@ class DataGenerator:
             help="Number of different structures to generate and calculate.",
         )
         parser.add_argument(
-            "--pseudos",
+            "--no_pseudos",
             help="Use pseudos for calculations",
             default=True,
             action="store_false",
@@ -60,7 +61,12 @@ class DataGenerator:
         os.chdir("run_dir/")
         os.makedirs("geopt/", exist_ok=True)
         os.chdir("geopt/")
-        job = Job(name=jobname, posinp=self.initpos, inputparams=self.input, pseudos=self.pseudos)
+        job = Job(
+            name=jobname,
+            posinp=self.initpos,
+            inputparams=self.input,
+            pseudos=self.pseudos,
+        )
         geopt = Geopt(job, forcemax=1e-04)
         geopt.run(nmpi=self.nmpi)
         copyfile("final_{}.xyz".format(jobname), "../../saved_results/000000.xyz")
@@ -78,7 +84,10 @@ class DataGenerator:
                     pseudos=self.pseudos,
                 )
                 job.run(nmpi=self.nmpi)
-                copyfile("forces_{}.xyz".format(jobname), "../../saved_results/{:06}.xyz".format(i))
+                copyfile(
+                    "forces_{}.xyz".format(jobname),
+                    "../../saved_results/{:06}.xyz".format(i),
+                )
                 os.chdir("../")
             except OSError:
                 os.chdir("{}_{:06}".format(jobname, i))
@@ -94,7 +103,10 @@ class DataGenerator:
                         pseudos=self.pseudos,
                     )
                     job.run(self.nmpi, restart_if_incomplete=True)
-                    copyfile("forces_{}.xyz".format(jobname), "../../saved_results/{:06}.xyz".format(i))
+                    copyfile(
+                        "forces_{}.xyz".format(jobname),
+                        "../../saved_results/{:06}.xyz".format(i),
+                    )
                 os.chdir("../")
         os.chdir("../")
 
