@@ -36,7 +36,7 @@ class DbReader:
             action="store_false",
         )
         parser.add_argument(
-            "--nmpi", help="Number of mpi processes", type=int, defalt=6
+            "--nmpi", help="Number of mpi processes", type=int, default=6
         )
         return parser
 
@@ -70,6 +70,10 @@ class DbReader:
                     os.chdir("{}_{:06}".format(jobname, i))
                     try:
                         log = Logfile.from_file("log-" + jobname + ".yaml")
+                        copyfile(
+                            "forces_{}.xyz".format(jobname),
+                            "../../saved_results/{:06}.xyz".format(i),
+                        )
                         print("Calculation {:06} was complete.\n".format(i))
                     except:
                         job = Job(
@@ -108,5 +112,5 @@ class DbReader:
 
 
 if __name__ == "__main__":
-    dbr = DbReader(dbname=str(sys.argv[1]))
+    dbr = DbReader()
     dbr.read()
