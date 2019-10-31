@@ -1,13 +1,19 @@
+#! /usr/bin/env python
+
 import os
 import ase
 import sys
+import argparse
 from ase.db import connect
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
 
+
 class DbCreator:
-    def __init__(self, dbname):
-        self.dbname = dbname
+    def __init__(self):
+        self.parser = self._create_parser()
+        args = self.parser.parse_args()
+        self.dbname = args.dbname
 
     def create(self):
         files = [f for f in os.listdir() if f.endswith(".xyz")]
@@ -33,6 +39,11 @@ class DbCreator:
                 atoms = posinp_to_ase_atoms(posinp)
                 db.write(atoms, data={"energy": energy, "forces": forces})
 
+    def _create_parser(self):
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument("dbname", help="Name of the database to create.")
+        return parser
+
     @property
     def dbname(self):
         return self._dbname
@@ -47,5 +58,5 @@ class DbCreator:
 
 
 if __name__ == "__main__":
-    dbc = DbCreator(name=sys.argv[1])
+    dbc = DbCreator()
     dbc.create()
