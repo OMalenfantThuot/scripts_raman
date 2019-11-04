@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import sys
+import argparse
 
 sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
 
@@ -49,5 +50,14 @@ def single_phonon_calculation(
         save("phonons/ph_energies.npy", phonons.energies)
 
 
+def create_parser():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--nmpi", help="Number of mpi processes", type=int, default=6)
+    parser.add_argument("--save", help="Create a savefile", action="store_true", default=False)
+    parser.add_argument("--no_pseudos", default=True, action="store_false")
+    return parser
+
 if __name__ == "__main__":
-    single_phonon_calculation(nmpi=2)
+    parser = create_parser()
+    args = parser.parse_args()
+    single_phonon_calculation(nmpi=args.nmpi, savefile=args.save, pseudos=args.no_pseudos)
