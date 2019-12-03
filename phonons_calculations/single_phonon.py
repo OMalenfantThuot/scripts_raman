@@ -12,7 +12,7 @@ from numpy import save
 
 
 def single_phonon_calculation(
-    nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False
+    nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False, verbose=False
 ):
     if preparation:
         base_inp, ref_pos, jobname = utils.prepare_calculations()
@@ -43,21 +43,31 @@ def single_phonon_calculation(
     phonons = Phonons(ground_state)
     phonons.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
 
-    print("Phonons energies:")
-    print(phonons.energies)
+    if verbose:
+        for i in range(len(phonons.energies)):
+            print(f"Mode {i} :")
+            print("Energy : ", phonons.energies[i])
+            print("Mode : ", phonons.normal_modes[:, i], "\n")
 
     if savefile:
         save("phonons/ph_energies.npy", phonons.energies)
+        save("phonons/ph_normal_modes.npy", phonons.normal_modes)
 
 
 def create_parser():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
     parser.add_argument("--nmpi", help="Number of mpi processes", type=int, default=6)
-    parser.add_argument("--save", help="Create a savefile", action="store_true", default=False)
+    parser.add_argument(
+        "--save", help="Create a savefile", action="store_true", default=False
+    )
     parser.add_argument("--no_pseudos", default=True, action="store_false")
+    parser.add_argument("-v", default=False, action="store_true")
     return parser
+
 
 if __name__ == "__main__":
     parser = create_parser()
     args = parser.parse_args()
-    single_phonon_calculation(nmpi=args.nmpi, savefile=args.save, pseudos=args.no_pseudos)
+    single_phonon_calculation(
+        nmpi=args.nmpi, savefile=args.save, pseudos=args.no_pseudos, verbose=args.v
+    )
