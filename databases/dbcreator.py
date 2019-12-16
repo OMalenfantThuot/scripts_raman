@@ -21,6 +21,7 @@ class DbCreator:
     def create(self):
         files = [f for f in os.listdir() if f.endswith(".xyz")]
         with connect(self.dbname) as db:
+            db.metadata = DEFAULT_METADATA
             for f in files:
                 posinp = Posinp.from_file(f)
                 with open(f, "r") as posinp_file:
@@ -41,7 +42,6 @@ class DbCreator:
                             break
                 atoms = posinp_to_ase_atoms(posinp)
                 db.write(atoms, data={"energy": energy, "forces": forces})
-            db.metadata = DEFAULT_METADATA
 
     def _create_parser(self):
         parser = argparse.ArgumentParser(add_help=False)
