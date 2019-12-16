@@ -11,14 +11,17 @@ class DbMerger:
         self.old_names = list(old_names)
 
     def mergedata(self):
+        meta = {}
         with connect(self.dbname) as db:
             for name in self.old_names:
                 with connect(name) as olddb:
+                    meta.update(**olddb.metadata)
                     for row in olddb.select():
                         try:
                             db.write(row)
                         except sqlite3.IntegrityError:
                             pass
+            db.metadata = meta
 
 
 def create_parser():

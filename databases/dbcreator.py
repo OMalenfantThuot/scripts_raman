@@ -8,6 +8,9 @@ from ase.db import connect
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
 
+sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
+from utils.global_variables import DEFAULT_METADATA
+
 
 class DbCreator:
     def __init__(self):
@@ -38,6 +41,7 @@ class DbCreator:
                             break
                 atoms = posinp_to_ase_atoms(posinp)
                 db.write(atoms, data={"energy": energy, "forces": forces})
+            db.metadata = DEFAULT_METADATA
 
     def _create_parser(self):
         parser = argparse.ArgumentParser(add_help=False)
