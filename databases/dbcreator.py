@@ -44,7 +44,7 @@ class DbCreator:
                 db.write(atoms, data={"energy": energy, "forces": forces})
 
     def _create_parser(self):
-        parser = argparse.ArgumentParser(add_help=False)
+        parser = argparse.ArgumentParser(add_help=True)
         parser.add_argument("dbname", help="Name of the database to create.")
         return parser
 
