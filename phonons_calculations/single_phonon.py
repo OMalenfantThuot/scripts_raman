@@ -12,23 +12,31 @@ from numpy import save
 
 
 def single_phonon_calculation(
-    nmpi=1, nomp=1, preparation=True, savefile=True, pseudos=False, verbose=False
+    nmpi=1,
+    nomp=1,
+    preparation=True,
+    savefile=True,
+    pseudos=False,
+    verbose=False,
+    optimization=True,
 ):
     if preparation:
         base_inp, ref_pos, jobname = utils.prepare_calculations()
 
-    base_job = Job(
-        posinp=ref_pos,
-        inputparams=base_inp,
-        name=jobname,
-        run_dir="geopt/",
-        pseudos=pseudos,
-    )
+    if optimization:
+        base_job = Job(
+            posinp=ref_pos,
+            inputparams=base_inp,
+            name=jobname,
+            run_dir="geopt/",
+            pseudos=pseudos,
+        )
+        geopt = Geopt(base_job, forcemax=2e-5, ncount_cluster_x=50)
+        geopt.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
+        relaxed_pos = geopt.final_posinp
+    else:
+        relaxed_pos = ref_pos
 
-    geopt = Geopt(base_job, forcemax=2e-5, ncount_cluster_x=50)
-    geopt.run(nmpi=nmpi, nomp=nomp, restart_if_incomplete=True)
-
-    relaxed_pos = geopt.final_posinp
     if "output" in base_inp:
         del base_inp["output"]
 
@@ -37,7 +45,7 @@ def single_phonon_calculation(
         posinp=relaxed_pos,
         inputparams=base_inp,
         run_dir="phonons/",
-        ref_data_dir=geopt.queue[0].data_dir,
+        ref_data_dir=(geopt.queue[0].data_dir if optimization else None),
         pseudos=pseudos,
     )
     phonons = Phonons(ground_state)
@@ -61,6 +69,7 @@ def create_parser():
         "--save", help="Create a savefile", action="store_true", default=False
     )
     parser.add_argument("--no_pseudos", default=True, action="store_false")
+    parser.add_argument("--no_geopt", default=True, action="store_false")
     parser.add_argument("-v", default=False, action="store_true")
     return parser
 
@@ -69,5 +78,9 @@ if __name__ == "__main__":
     parser = create_parser()
     args = parser.parse_args()
     single_phonon_calculation(
-        nmpi=args.nmpi, savefile=args.save, pseudos=args.no_pseudos, verbose=args.v
+        nmpi=args.nmpi,
+        savefile=args.save,
+        pseudos=args.no_pseudos,
+        verbose=args.v,
+        optimization=args.no_geopt,
     )
