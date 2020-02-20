@@ -21,6 +21,7 @@ def build_parser():
     parser.add_argument("properties", help="Properties to evaluate.", nargs="*")
     return parser
 
+
 def main(args):
 
     eval_name = args.modelpath.split("/")[-1]
@@ -32,11 +33,14 @@ def main(args):
             raise Exception(
                 "The evaluation file already exists. Delete it or add the overwrite flag."
             )
-    
+
     calculator = mlcalcdriver.calculators.SchnetPackCalculator(args.modelpath)
-    
+
     with connect(args.dbpath) as db:
-        answers, results = [[] for _ in range(len(args.properties))], [[] for _ in range(len(args.properties))]
+        answers, results = (
+            [[] for _ in range(len(args.properties))],
+            [[] for _ in range(len(args.properties))],
+        )
         for row in db.select():
             posinp = mlcalcdriver.interfaces.ase_atoms_to_posinp(row.toatoms())
             job = Job(posinp=posinp, calculator=calculator)
@@ -46,11 +50,15 @@ def main(args):
                 answers[i].append(row.data[prop])
 
     error = []
+    header = ["MAE_" + prop for prop in args.properties]
     for l1, l2 in zip(answers, results):
         an, re = np.array(l1).flatten(), np.array(l2).flatten()
         error.append(np.abs(an - re).mean())
 
-    print(error)
+    with open(eval_file, "w") as file:
+        wr = csv.writer(file)
+        wr.writerow(header)
+        wr.writerow(error)
 
 
 if __name__ == "__main__":
