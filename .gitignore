@@ -3,3 +3,4 @@ test.py
 workdir/
 *.png
 *.swp
+*.data
