@@ -26,8 +26,21 @@ def main(args):
         for i, at in enumerate(initpos):
             new_pos = deepcopy(initpos)
             if i != first_idx:
-                new_pos.atoms[i] = Atom("N", new_pos.atoms[i].position)
+                new_pos.atoms[i] = Atom("N", at.position)
                 configurations.append(new_pos)
+
+    elif args.n_defects == 3:
+
+        initpos, first_idx = place_first_nitrogen(initpos)
+        for i, at1 in enumerate(initpos):
+            if i != first_idx:
+                new_pos = deepcopy(initpos)
+                new_pos.atoms[i] = Atom("N", at1.position)
+                for j, at2 in enumerate(initpos):
+                    if j != first_idx and j > i:
+                        new_pos2 = deepcopy(new_pos)
+                        new_pos2.atoms[j] = Atom("N", at2.position)
+                        configurations.append(new_pos2)
 
     unique_configurations = determine_unique_configurations(configurations)
     print("There are {} unique configurations.".format(len(unique_configurations)))
