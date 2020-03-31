@@ -9,20 +9,19 @@ import sys
 sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
 from utils import generate_graphene_cell, determine_unique_configurations
 
+
 def main(args):
 
     initpos = generate_graphene_cell(args.xsize, args.zsize)
     configurations = []
 
-    if args.n_defects==1:
+    if args.n_defects == 1:
 
-        for i, at in enumerate(initpos):
-            new_pos = deepcopy(initpos)
-            new_pos.atoms[i] = Atom("N", new_pos.atoms[i].position)
-            configurations.append(new_pos)
+        initpos, _ = place_first_nitrogen(initpos)
+        configurations = [initpos]
 
     elif args.n_defects == 2:
-        
+
         initpos, first_idx = place_first_nitrogen(initpos)
         for i, at in enumerate(initpos):
             new_pos = deepcopy(initpos)
@@ -31,8 +30,11 @@ def main(args):
                 configurations.append(new_pos)
 
     unique_configurations = determine_unique_configurations(configurations)
-    for i,uni in enumerate(unique_configurations):
-        uni.write("{}_{:03}.xyz".format(args.name, i))
+    print("There are {} unique configurations.".format(len(unique_configurations)))
+    if args.output:
+        for i, uni in enumerate(unique_configurations):
+            uni.write("{}_{:03}.xyz".format(args.name, i))
+
 
 def place_first_nitrogen(posinp):
     distances_to_middle = np.linalg.norm(
@@ -42,11 +44,10 @@ def place_first_nitrogen(posinp):
     posinp.atoms[idx] = Atom("N", posinp.atoms[idx].position)
     return posinp, idx
 
+
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "name", type=str, help="Name for outputs.", default="name"
-    )
+    parser.add_argument("name", type=str, help="Name for outputs.", default="name")
     parser.add_argument(
         "n_defects", type=int, help="Number of nitrogen defects to introduce."
     )
@@ -60,7 +61,14 @@ def create_parser():
         type=int,
         help="Number of repetition of the base cell in the z direction.",
     )
+    parser.add_argument(
+        "--output",
+        default=False,
+        action="store_true",
+        help="If used, the unique positions will be written on disk.",
+    )
     return parser
+
 
 if __name__ == "__main__":
     parser = create_parser()
