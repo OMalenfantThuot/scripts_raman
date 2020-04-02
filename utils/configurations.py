@@ -19,9 +19,10 @@ def compare_reps(rep1, rep2):
         return(True)
 
 def determine_unique_configurations(configurations):
+    cutoff = 5.0
     unique_reps, unique_config, reps = [], [], []
-    schnet = SchNet(n_atom_basis=32, n_filters=32, cutoff=5.0, cutoff_network=CosineCutoff)
-    env = AseEnvironmentProvider(cutoff=5.0)
+    schnet = SchNet(n_atom_basis=32, n_filters=32, cutoff=cutoff, cutoff_network=CosineCutoff)
+    env = AseEnvironmentProvider(cutoff=cutoff)
 
     data = [posinp_to_ase_atoms(pos) for pos in configurations]
     
