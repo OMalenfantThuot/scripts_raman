@@ -21,7 +21,8 @@ class DbMerger:
                             db.write(row)
                         except sqlite3.IntegrityError:
                             pass
-            db.metadata = meta
+        db = connect(self.dbname)
+        db.metadata = meta
 
 
 def create_parser():
