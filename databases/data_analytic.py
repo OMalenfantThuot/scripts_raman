@@ -65,6 +65,10 @@ def get_function(name):
         from utils.analytic_functions import Cos
         
         return Cos()
+    elif name == "lj" or name == "lennardjones":
+        from utils.analytic_functions import LennardJones
+
+        return LennardJones()
     else:
         raise NotImplementedError
 
