@@ -7,11 +7,20 @@ def simple_fn(args):
         return err_sq
     return loss
 
-def tilted_fn(args):
+def tilted_down(args):
     def loss(batch, result):
         diff = (batch[args.property] - result[args.property])
         idx = torch.where(diff>=0)
-        diff[idx] = diff[idx] * 10.
+        diff[idx] = diff[idx] * 4.
+        err = torch.mean(diff ** 2)
+        return err
+    return loss
+
+def tilted_up(args):
+    def loss(batch, result):
+        diff = (batch[args.property] - result[args.property])
+        idx = torch.where(diff<=0)
+        diff[idx] = diff[idx] * 4.
         err = torch.mean(diff ** 2)
         return err
     return loss

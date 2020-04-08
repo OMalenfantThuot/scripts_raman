@@ -133,7 +133,7 @@ def get_loss_fn(args):
     derivative = spk.utils.get_derivative(args)
     contributions = spk.utils.get_contributions(args)
     stress = spk.utils.get_stress(args)
-    if args.loss in ["default", "tilted"]:
+    if args.loss in ["default", "tilted_up", "tilted_down"]:
         loss = args.loss
     else:
         raise ValueError("The loss argument is not recognized.")
@@ -180,9 +180,12 @@ def get_loss_fn(args):
             stress=stress,
         )
         return tradeoff_loss_fn(rho, property_names)
-    elif loss == "tilted":
+    elif loss == "tilted_down":
         if derivative is None and contributions is None and stress is None:
-            return utils.loss_functions.tilted_fn(args)
+            return utils.loss_functions.tilted_down(args)
+    elif loss == "tilted_up":
+        if derivative is None and contributions is None and stress is None:
+            return utils.loss_functions.tilted_up(args)
 
 
 if __name__ == "__main__":
