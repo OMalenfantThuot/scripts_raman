@@ -42,3 +42,31 @@ class LennardJones:
 
     def second_derivative(self, x):
         return 4 * self.E0 * (156 * self.d ** 12 / x ** 14 - 42 * self.d ** 6 / x ** 8)
+
+
+class Quadratic:
+    def __init__(self):
+        pass
+
+    def value(self, x):
+        return x ** 2
+
+    def first_derivative(self, x):
+        return 2 * x
+
+    def second_derivative(self, x):
+        return 2
+
+
+class Polynomial_order4:
+    def __init__(self):
+        pass
+
+    def value(self, x):
+        return x ** 4
+
+    def first_derivative(self, x):
+        return 4 * x ** 3
+
+    def second_derivative(self, x):
+        return 12 * x ** 2
