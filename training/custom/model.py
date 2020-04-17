@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class SimpleNet(nn.Module):
-    def __init__(self):
+    def __init__(self, width=32):
         super(SimpleNet, self).__init__()
         self.lin1 = nn.Linear(1, width)
         self.lin2 = nn.Linear(width, width)
@@ -15,7 +15,7 @@ class SimpleNet(nn.Module):
         fx = self.act1(self.lin1(x))
         fx = self.act2(self.lin2(fx))
         fx = self.lin3(fx)
-        return fx
+        return {"x": x, "fx": fx}
 
 
 def get_model(args):

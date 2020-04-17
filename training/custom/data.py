@@ -46,33 +46,32 @@ class CustomDataset(Dataset):
         self.fx = fx
 
     def __len__(self):
-        return len(x)
+        return len(self.x)
 
     def __getitem__(self, idx):
         point = {"x": self.x[idx], "fx": self.fx[idx]}
+        return point
 
 
-def get_dataset(x, fx):
-    return CustomDataset(x, fx)
-
-
-def split_data(split):
+def split_data(args, x, fx):
     if len(args.split) != 2:
         raise ValueError("Data splitting invalid.")
-    if np.sum(split) > len(x):
+    if np.sum(args.split) > args.ndata:
         raise ValueError("Splits are too large for the data.")
 
-    full_idx = np.linspace(0, len(x) - 1, len(x)).astype(int)
+    full_idx = np.linspace(0, args.ndata - 1, args.ndata).astype(int)
     np.random.shuffle(full_idx)
 
-    train_idx, val_idx = full_idx[: split[0]], full_idx[split[0] : split[0] + split[1]]
-    return train_idx, val_idx
+    train_idx, val_idx = (
+        full_idx[: args.split[0]],
+        full_idx[args.split[0] : args.split[0] + args.split[1]],
+    )
+    train_data = CustomDataset(x[train_idx], fx[train_idx])
+    val_data = CustomDataset(x[val_idx], fx[val_idx])
+    return train_data, val_data
 
 
-def get_loaders(dataset, train_idx, val_idx):
-    train_sampler = SubsetRandomSampler(train_idx)
-    val_sampler = SubsetRandomSampler(val_idx)
-
-    train_loader = DataLoader(dataset, batch_size=8, sampler=train_sampler)
-    val_loader = DataLoader(dataset, batch_size=8, sampler=val_sampler)
-    return train_sampler, val_sampler
+def get_loaders(train_data, val_data):
+    train_loader = DataLoader(train_data, batch_size=8, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=8, shuffle=False)
+    return train_loader, val_loader
