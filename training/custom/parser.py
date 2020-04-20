@@ -3,7 +3,7 @@ import argparse
 
 def build_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("model", help="Type of model to train.")
+    parser.add_argument("model", choices=["simple"], help="Type of model to train.")
     parser.add_argument("ndata", type=int, help="Number of data points to generate.")
     parser.add_argument(
         "--split", type=int, help="Number of training and validation points.", nargs=2

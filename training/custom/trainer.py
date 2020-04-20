@@ -14,7 +14,7 @@ class Trainer:
         self.optimizer = Adam(self.model.parameters())
         self.loss_fn = loss_fn
         self.device = device
-        self.max_epochs = 200
+        self.max_epochs = 30
 
     def train(self):
         self.model.to(self.device)
@@ -58,9 +58,14 @@ class Trainer:
             else:
                 it_count += 1
 
+            if i%10 == 0:    
+                print("Iteration :", i)
+                print("Train loss :", it_train_loss)
+                print("Val loss :", it_val_loss)
+
             if it_count >= patience:
                 break
-
+        
         torch.save(self.model, "trained_model")
 
 
