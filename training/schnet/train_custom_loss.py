@@ -21,9 +21,6 @@ from schnetpack.utils.script_utils.settings import get_environment_provider
 from schnetpack.utils.script_utils.parsing import build_parser
 from schnetpack.utils.script_utils.model import get_output_module
 
-sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
-import utils.loss_functions
-
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 
@@ -140,7 +137,9 @@ def get_loss_fn(args):
     if loss == "default":
         # simple loss function for training on property only
         if derivative is None and contributions is None and stress is None:
-            return utils.loss_functions.simple_fn(args)
+            from utils.functions.schnet_loss import simple_fn
+
+            return simple_fn(args)
 
         # loss function with tradeoff weights
         if type(args.rho) == float:
@@ -182,10 +181,14 @@ def get_loss_fn(args):
         return tradeoff_loss_fn(rho, property_names)
     elif loss == "tilted_down":
         if derivative is None and contributions is None and stress is None:
-            return utils.loss_functions.tilted_down(args)
+            from utils.functions.schnet_loss import tilted_down
+
+            return tilted_down(args)
     elif loss == "tilted_up":
         if derivative is None and contributions is None and stress is None:
-            return utils.loss_functions.tilted_up(args)
+            from utils.functions.schnet_loss import tilted_up
+
+            return tilted_up(args)
 
 
 if __name__ == "__main__":

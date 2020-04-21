@@ -103,7 +103,9 @@ def create_parser():
         default=False,
         action="store_true",
     )
-    parser.add_argument("--nmpi", help="Number of mpi processes, default is 6.", type=int, default=6)
+    parser.add_argument(
+        "--nmpi", help="Number of mpi processes, default is 6.", type=int, default=6
+    )
     return parser
 
 

@@ -5,3 +5,4 @@ workdir/
 *.swp
 *.data
 *.jpg
+*egg-info/

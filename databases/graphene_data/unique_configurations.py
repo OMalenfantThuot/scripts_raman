@@ -5,9 +5,8 @@ from copy import deepcopy
 import numpy as np
 import argparse
 import sys
-
-sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
-from utils import generate_graphene_cell, determine_unique_configurations
+from utils.calculations.graphene import generate_graphene_cell
+from utils.calculations.configurations import determine_unique_configurations
 
 
 def main(args):
