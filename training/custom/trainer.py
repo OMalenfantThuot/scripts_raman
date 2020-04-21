@@ -14,7 +14,7 @@ class Trainer:
         self.optimizer = Adam(self.model.parameters())
         self.loss_fn = loss_fn
         self.device = device
-        self.max_epochs = 30
+        self.max_epochs = 300
 
     def train(self):
         self.model.to(self.device)
@@ -79,14 +79,14 @@ def get_trainer(model, train_loader, val_loader, device, args):
 
 def get_loss_fn(args):
     if args.loss == "default":
-        from loss import default_loss
+        from utils.functions.custom_loss import default_loss
 
         return default_loss()
     elif args.loss == "up":
-        from loss import up_loss
+        from utils.functions.custom_loss import up_loss
 
         return up_loss()
     elif args.loss == "down":
-        from loss import down_loss
+        from utils.functions.custom_loss import down_loss
 
         return down_loss()

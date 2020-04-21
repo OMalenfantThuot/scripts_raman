@@ -2,7 +2,7 @@
 import torch
 from parser import build_parser
 from data import get_data, split_data, get_loaders
-from model import get_model
+from utils.models import get_model
 from trainer import get_trainer
 
 

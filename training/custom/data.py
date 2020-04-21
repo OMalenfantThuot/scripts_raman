@@ -4,8 +4,6 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
-sys.path.append(os.environ["RAMAN"])
-
 
 def get_data(args):
     function = get_function(args.function)
@@ -16,23 +14,23 @@ def get_data(args):
 
 def get_function(name):
     if name == "sin":
-        from utils.analytic_functions import Sin
+        from utils.functions.analytic_functions import Sin
 
         return Sin()
     elif name == "cos":
-        from utils.analytic_functions import Cos
+        from utils.functions.analytic_functions import Cos
 
         return Cos()
     elif name == "lj" or name == "lennardjones":
-        from utils.analytic_functions import LennardJones
+        from utils.functions.analytic_functions import LennardJones
 
         return LennardJones()
     elif name == "quad":
-        from utils.analytic_functions import Quadratic
+        from utils.functions.analytic_functions import Quadratic
 
         return Quadratic()
     elif name == "p4":
-        from utils.analytic_functions import Polynomial_order4
+        from utils.functions.analytic_functions import Polynomial_order4
 
         return Polynomial_order4()
     else:
