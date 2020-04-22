@@ -14,7 +14,7 @@ class Trainer:
         self.optimizer = Adam(self.model.parameters())
         self.loss_fn = loss_fn
         self.device = device
-        self.max_epochs = 300
+        self.max_epochs = 10000
 
     def train(self):
         self.model.to(self.device)
@@ -28,46 +28,43 @@ class Trainer:
 
         patience, it_count = 30, 0
         best_loss = 10**6
-
-        for i in range(self.max_epochs):
-            it_train_loss, it_val_loss = 0.0, 0.0
-            for train_batch in self.train_loader:
-                self.optimizer.zero_grad()
-                train_batch = {
-                    k: v.reshape(-1, 1).to(self.device) for k, v in train_batch.items()
-                }
-                result = self.model(train_batch["x"])
-                batch_train_loss = self.loss_fn(train_batch, result)
-                it_train_loss += batch_train_loss * len(train_batch)
-                batch_train_loss.backward()
-                self.optimizer.step()
-            it_train_loss = it_train_loss / n_train
-
-            for val_batch in self.val_loader:
-                val_batch = {
-                    k: v.reshape(-1, 1).to(self.device) for k, v in val_batch.items()
-                }
-                result = self.model(val_batch["x"])
-                batch_val_loss = self.loss_fn(val_batch, result)
-                it_val_loss += batch_val_loss * len(val_batch)
-            it_val_loss = it_val_loss / n_val
-
-            if it_val_loss < best_loss:
-                best_loss = it_val_loss
-                it_count = 0
-            else:
-                it_count += 1
-
-            if i%10 == 0:    
-                print("Iteration :", i)
-                print("Train loss :", it_train_loss)
-                print("Val loss :", it_val_loss)
-
-            if it_count >= patience:
-                break
         
-        torch.save(self.model, "trained_model")
+        with open("train.log", "w") as out:
+            for i in range(self.max_epochs):
+                it_train_loss, it_val_loss = 0.0, 0.0
+                for train_batch in self.train_loader:
+                    self.optimizer.zero_grad()
+                    train_batch = {
+                        k: v.reshape(-1, 1).to(self.device) for k, v in train_batch.items()
+                    }
+                    result = self.model(train_batch["x"])
+                    batch_train_loss = self.loss_fn(train_batch, result)
+                    it_train_loss += batch_train_loss * len(train_batch)
+                    batch_train_loss.backward()
+                    self.optimizer.step()
+                it_train_loss = it_train_loss / n_train
 
+                for val_batch in self.val_loader:
+                    val_batch = {
+                        k: v.reshape(-1, 1).to(self.device) for k, v in val_batch.items()
+                    }
+                    result = self.model(val_batch["x"])
+                    batch_val_loss = self.loss_fn(val_batch, result)
+                    it_val_loss += batch_val_loss * len(val_batch)
+                it_val_loss = it_val_loss / n_val
+
+                if it_val_loss < best_loss:
+                    best_loss = it_val_loss
+                    it_count = 0
+                    torch.save(self.model, "best_model")
+                else:
+                    it_count += 1
+
+                out.write("Iteration : {} \tTrain loss : {} \tVal loss : {}\n".format(i, it_train_loss, it_val_loss))
+                if it_count >= patience:
+                    out.write("Patience exceeded.\n")
+                    break
+            out.write("Training completed.")
 
 
 

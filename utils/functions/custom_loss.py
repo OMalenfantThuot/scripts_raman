@@ -18,7 +18,7 @@ def down_loss():
 
 def up_loss():
     def loss(batch, result):
-        diff = (batch["fx"] - result["fx"])
+        diff = (result["fx"] - batch["fx"])
         idx = torch.where(diff<=0)
         diff[idx] = diff[idx] * 4.
         err = torch.mean(diff ** 2)
