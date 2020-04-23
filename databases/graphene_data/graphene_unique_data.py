@@ -72,7 +72,7 @@ def generate_random_structure(initpos):
     for j in trans_idx:
         phi = 2 * np.pi * np.random.rand()
         theta = np.arccos(2 * np.random.rand() - 1)
-        r = radius * np.cbrt(np.random.rand())
+        r = radius * np.random.rand()
         pos = pos.translate_atom(
             j,
             [
