@@ -30,4 +30,10 @@ def build_parser():
         choices=["default", "up", "down"],
         help="Type of loss function to use for training.",
     )
+    parser.add_argument(
+        "--save_splits",
+        default=False,
+        action="store_true",
+        help="Save training and validation splits.",
+    )
     return parser

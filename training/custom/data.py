@@ -1,5 +1,6 @@
 import os
 import sys
+import pickle
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -70,6 +71,14 @@ def split_data(args, x, fx):
 
 
 def get_loaders(train_data, val_data):
-    train_loader = DataLoader(train_data, batch_size=8, shuffle=True)
-    val_loader = DataLoader(val_data, batch_size=8, shuffle=False)
+    train_loader = DataLoader(train_data, batch_size=2, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=2, shuffle=False)
     return train_loader, val_loader
+
+def save_splits(train_data, val_data):
+    f = open("training_points.pkl", "wb")
+    g = open("validation_points.pkl", "wb")
+    pickle.dump(train_data[:], f)
+    pickle.dump(val_data[:], g)
+    f.close()
+    g.close()
