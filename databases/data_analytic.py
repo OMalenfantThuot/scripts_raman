@@ -7,8 +7,6 @@ from ase.db import connect
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
 
-sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
-
 
 def main(args):
     function = get_function(args.function)
@@ -58,15 +56,15 @@ def create_parser():
 
 def get_function(name):
     if name == "sin":
-        from utils.analytic_functions import Sin
+        from utils.functions.analytic_functions import Sin
 
         return Sin()
     elif name == "cos":
-        from utils.analytic_functions import Cos
-        
+        from utils.functions.analytic_functions import Cos
+
         return Cos()
     elif name == "lj" or name == "lennardjones":
-        from utils.analytic_functions import LennardJones
+        from utils.functions.analytic_functions import LennardJones
 
         return LennardJones()
     else:

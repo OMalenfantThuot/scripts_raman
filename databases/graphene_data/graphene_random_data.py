@@ -7,9 +7,7 @@ import numpy as np
 import argparse
 import sys
 import os
-
-sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
-from utils import generate_graphene_cell
+from utils.calculations.graphene import generate_graphene_cell
 
 
 def main(args):
@@ -31,15 +29,15 @@ def main(args):
     os.chdir("run_dir/")
 
     if args.n_defects == 0:
-        
+
         for i in range(1, args.n_structs + 1):
             posinp = generate_random_structure(initpos)
             run(posinp, i, args, param, pseudos)
 
     elif args.n_defects == 1:
-        
+
         initpos, _ = place_first_nitrogen(initpos)
-        
+
         for i in range(1, args.n_structs + 1):
             posinp = generate_random_structure(initpos)
             run(posinp, i, args, param, pseudos)
@@ -58,14 +56,14 @@ def main(args):
         angles = np.linspace(0, 2 * np.pi, n_angle)
 
         i = 0
-        #distances = np.zeros(int(n_angle * n_radius))
+        # distances = np.zeros(int(n_angle * n_radius))
         for theta in angles:
             for r in radiuses:
-                i += 1 
+                i += 1
                 posinp, second_idx = place_second_nitrogen(initpos, theta, r, first_idx)
-        #        distances[i-1] = np.linalg.norm(posinp.positions[first_idx] - posinp.positions[second_idx])
+                #        distances[i-1] = np.linalg.norm(posinp.positions[first_idx] - posinp.positions[second_idx])
                 run(posinp, i, args, param, pseudos)
-        #np.savetxt("distances.data", distances)
+        # np.savetxt("distances.data", distances)
 
     elif args.n_defects == 3:
         root = np.sqrt(args.n_structs)
@@ -124,6 +122,7 @@ def generate_random_structure(initpos):
         )
     return pos
 
+
 def place_first_nitrogen(posinp):
     distances_to_middle = np.linalg.norm(
         posinp.positions - np.array(posinp.cell) / 2, axis=1
@@ -132,13 +131,16 @@ def place_first_nitrogen(posinp):
     posinp.atoms[idx] = Atom("N", posinp.atoms[idx].position)
     return posinp, idx
 
+
 def place_second_nitrogen(initpos, theta, r, first_idx):
     posinp = deepcopy(initpos)
-    point = np.array(posinp.cell) / 2 + np.array([r * np.cos(theta), 0, r * np.sin(theta)])
+    point = np.array(posinp.cell) / 2 + np.array(
+        [r * np.cos(theta), 0, r * np.sin(theta)]
+    )
     distances_to_point = np.linalg.norm(posinp.positions - point, axis=1)
-    weigths = np.exp(-distances_to_point ** 2 / 2)
+    weigths = np.exp(-(distances_to_point ** 2) / 2)
     weigths[first_idx] = 0
-    weigths = weigths/np.sum(weigths)
+    weigths = weigths / np.sum(weigths)
     second_idx = int(np.random.choice(len(posinp), 1, p=weigths))
     posinp.atoms[second_idx] = Atom("N", posinp.atoms[second_idx].position)
     return posinp, second_idx

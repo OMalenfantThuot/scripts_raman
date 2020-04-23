@@ -72,7 +72,7 @@ def generate_random_structure(initpos):
     for j in trans_idx:
         phi = 2 * np.pi * np.random.rand()
         theta = np.arccos(2 * np.random.rand() - 1)
-        r = radius * np.cbrt(np.random.rand())
+        r = radius * np.random.rand()
         pos = pos.translate_atom(
             j,
             [
@@ -103,7 +103,9 @@ def create_parser():
         default=False,
         action="store_true",
     )
-    parser.add_argument("--nmpi", help="Number of mpi processes, default is 6.", type=int, default=6)
+    parser.add_argument(
+        "--nmpi", help="Number of mpi processes, default is 6.", type=int, default=6
+    )
     return parser
 
 

@@ -7,8 +7,6 @@ import argparse
 from ase.db import connect
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
-
-sys.path.append("/lustre03/project/6004866/olimt/raman/scripts_raman/")
 from utils.global_variables import DEFAULT_METADATA
 
 

@@ -1,4 +1,4 @@
-import math as m
+import numpy as np
 
 
 class Sin:
@@ -6,13 +6,13 @@ class Sin:
         pass
 
     def value(self, x):
-        return m.sin(x)
+        return np.sin(x)
 
     def first_derivative(self, x):
-        return m.cos(x)
+        return np.cos(x)
 
     def second_derivative(self, x):
-        return -m.sin(x)
+        return -np.sin(x)
 
 
 class Cos:
@@ -20,13 +20,13 @@ class Cos:
         pass
 
     def value(self, x):
-        return m.cos(x)
+        return np.cos(x)
 
     def first_derivative(self, x):
-        return -m.sin(x)
+        return -np.sin(x)
 
     def second_derivative(self, x):
-        return -m.cos(x)
+        return -np.cos(x)
 
 
 class LennardJones:
@@ -55,7 +55,7 @@ class Quadratic:
         return 2 * x
 
     def second_derivative(self, x):
-        return 2
+        return 2 * np.ones(len(x))
 
 
 class Polynomial_order4:
