@@ -19,8 +19,8 @@ def build_parser():
     )
     parser.add_argument("--cuda", help="Use GPU for evaluation", action="store_true")
     parser.add_argument("properties", help="Properties to evaluate.", nargs="*")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch sizes.")
     return parser
-
 
 def main(args):
 
@@ -33,27 +33,41 @@ def main(args):
             raise Exception(
                 "The evaluation file already exists. Delete it or add the overwrite flag."
             )
-
-    calculator = mlcalcdriver.calculators.SchnetPackCalculator(args.modelpath)
+    device = "cuda" if args.cuda else "cpu"
+    calculator = mlcalcdriver.calculators.SchnetPackCalculator(args.modelpath, device=device)
 
     with connect(args.dbpath) as db:
         answers, results = (
             [[] for _ in range(len(args.properties))],
             [[] for _ in range(len(args.properties))],
         )
+        posinp = []
         for row in db.select():
-            posinp = mlcalcdriver.interfaces.ase_atoms_to_posinp(row.toatoms())
+            for i, prop in enumerate(args.properties):
+                answers[i].append(row.data[prop])
+            posinp.append(mlcalcdriver.interfaces.ase_atoms_to_posinp(row.toatoms()))
+
+            if len(posinp) == args.batch_size:
+                job = Job(posinp=posinp, calculator=calculator)
+                for i, prop in enumerate(args.properties):
+                    job.run(prop, batch_size=args.batch_size)
+                    results[i].append(job.results[prop].tolist())
+                posinp = []
+        if len(posinp) > 0:
             job = Job(posinp=posinp, calculator=calculator)
             for i, prop in enumerate(args.properties):
-                job.run(prop)
+                job.run(prop, batch_size=args.batch_size)
                 results[i].append(job.results[prop])
-                answers[i].append(row.data[prop])
+            posinp = []
 
-    error = []
-    header = ["MAE_" + prop for prop in args.properties]
+
+    header, error = [], []
+    for prop in args.properties:
+        header += ["MAE_" + prop, "%Error_" + prop]
     for l1, l2 in zip(answers, results):
-        an, re = np.array(l1).flatten(), np.array(l2).flatten()
+        an, re = np.array(l1).flatten(), np.concatenate(l2).flatten()
         error.append(np.abs(an - re).mean())
+        error.append(np.abs((an - re)/an).mean() * 100)
 
     with open(eval_file, "w") as file:
         wr = csv.writer(file)
