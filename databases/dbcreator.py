@@ -4,6 +4,7 @@ import os
 import ase
 import sys
 import argparse
+import numpy as np
 from ase.db import connect
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
@@ -37,6 +38,7 @@ class DbCreator:
                                         for force in posinp_file.readline().split()[-3:]
                                     ]
                                 )
+                            forces = np.array(forces)
                             break
                 atoms = posinp_to_ase_atoms(posinp)
                 db.write(atoms, data={"energy": energy, "forces": forces})
