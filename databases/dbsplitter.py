@@ -18,17 +18,17 @@ class DbSplitter:
         )
         with connect(self.dbname) as db, connect(out1) as db1, connect(out2) as db2:
             meta = deepcopy(db.metadata)
+            db1.metadata = meta
+            db2.metadata = meta
             idx = np.arange(1, db.count() + 1)
             np.random.shuffle(idx)
             idx1, idx2 = idx[: self.split], idx[self.split :]
             for idx in idx1:
                 row = db.get(id=idx.item())
                 db1.write(row)
-            db1.metadata = meta
             for idx in idx2:
                 row = db.get(id=idx.item())
                 db2.write(row)
-            db2.metadata = meta
 
 
 def create_parser():
