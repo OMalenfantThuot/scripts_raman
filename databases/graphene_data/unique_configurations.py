@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from mybigdft import Posinp, Atom
+from mlcalcdriver.base import Posinp, Atom
 from copy import deepcopy
 import numpy as np
 import argparse
@@ -41,16 +41,65 @@ def main(args):
                         new_pos2.atoms[j] = Atom("N", at2.position)
                         configurations.append(new_pos2)
 
-    unique_configurations = determine_unique_configurations(configurations)
-    print("There are {} unique configurations.".format(len(unique_configurations)))
+    elif args.n_defects == 4:
+
+        initpos, first_idx = place_first_nitrogen(initpos)
+        for i, at1 in enumerate(initpos):
+            if i != first_idx:
+                new_pos = deepcopy(initpos)
+                new_pos.atoms[i] = Atom("N", at1.position)
+                for j, at2 in enumerate(initpos):
+                    if j != first_idx and j > i:
+                        new_pos2 = deepcopy(new_pos)
+                        new_pos2.atoms[j] = Atom("N", at2.position)
+                        for k, at3 in enumerate(initpos):
+                            if k != first_idx and k > j:
+                                new_pos3 = deepcopy(new_pos2)
+                                new_pos3.atoms[k] = Atom("N", at3.position)
+                                configurations.append(new_pos3)
+
+    elif args.n_defects == 5:
+
+        initpos, first_idx = place_first_nitrogen(initpos)
+        for i, at1 in enumerate(initpos):
+            if i != first_idx:
+                new_pos = deepcopy(initpos)
+                new_pos.atoms[i] = Atom("N", at1.position)
+                for j, at2 in enumerate(initpos):
+                    if j != first_idx and j > i:
+                        new_pos2 = deepcopy(new_pos)
+                        new_pos2.atoms[j] = Atom("N", at2.position)
+                        for k, at3 in enumerate(initpos):
+                            if k != first_idx and k > j:
+                                new_pos3 = deepcopy(new_pos2)
+                                new_pos3.atoms[k] = Atom("N", at3.position)
+                                for m, at4 in enumerate(initpos):
+                                    if m != first_idx and m > k:
+                                        new_pos4 = deepcopy(new_pos3)
+                                        new_pos4.atoms[m] = Atom("N", at4.position)
+                                        configurations.append(new_pos4)
+
+    unique_configurations, count_configurations = determine_unique_configurations(
+        configurations
+    )
+    print(
+        "There are {} unique configurations, and {} configurations in total.".format(
+            len(unique_configurations), np.sum(count_configurations)
+        )
+    )
+    print("Counter:", count_configurations)
     if args.output:
-        for i, uni in enumerate(unique_configurations):
-            uni.write("{}_{:03}.xyz".format(args.name, i))
+        for i, (uni, count) in enumerate(
+            zip(unique_configurations, count_configurations)
+        ):
+            uni.write("{}_{:03}_(x{}).xyz".format(args.name, i, count))
 
 
 def place_first_nitrogen(posinp):
     distances_to_middle = np.linalg.norm(
-        posinp.positions - np.array(posinp.cell) / 2, axis=1
+        posinp.positions
+        - np.array((posinp.cell[0, 0], posinp.cell[1, 1], posinp.cell[2, 2])) / 2,
+        axis=1,
     )
     idx = np.argmin(distances_to_middle)
     posinp.atoms[idx] = Atom("N", posinp.atoms[idx].position)

@@ -6,3 +6,4 @@ workdir/
 *.data
 *.jpg
 *egg-info/
+data/
