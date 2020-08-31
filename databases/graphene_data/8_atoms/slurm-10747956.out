@@ -1,0 +1,10 @@
+/home/msadikov/envML/lib/python3.7/site-packages/mybigdft/globals.py:65: RuntimeWarning: BigDFT sources and/or root not found. If BigDFT is installed, run 'source bigdftvars.sh' in the same folder as the bigdft executable.
+  RuntimeWarning,
+Config 0 is unique
+Config 1 is unique
+Config 6 is unique
+Config 7 is unique
+Config 11 is unique
+Unique indices: [0, 1, 6, 7, 11]
+There are 5 unique configurations, and 21 configurations in total.
+Counter: [3, 6, 3, 3, 6]

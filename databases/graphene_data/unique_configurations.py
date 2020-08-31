@@ -27,7 +27,6 @@ def main(args):
             if i != first_idx:
                 new_pos.atoms[i] = Atom("N", at.position)
                 configurations.append(new_pos)
-                print('Config added', i)
 
     elif args.n_defects == 3:
 
@@ -41,7 +40,6 @@ def main(args):
                         new_pos2 = deepcopy(new_pos)
                         new_pos2.atoms[j] = Atom("N", at2.position)
                         configurations.append(new_pos2)
-                        print('Config added', i, j)
 
     elif args.n_defects ==4:
 
@@ -95,8 +93,6 @@ def place_first_nitrogen(posinp):
     distances_to_middle = np.linalg.norm(posinp.positions - np.array((posinp.cell[0,0], posinp.cell[1,1], posinp.cell[2,2])) / 2, axis=1)
     idx = np.argmin(distances_to_middle)
     posinp.atoms[idx] = Atom("N", posinp.atoms[idx].position)
-    print(posinp.cell)
-    print(idx, posinp.atoms[idx].position)
     return posinp, idx
 
 
