@@ -22,7 +22,7 @@ def compare_reps(rep1, rep2):
 
 
 def determine_unique_configurations(configurations):
-
+    
     cutoff = float(np.max(configurations[0].cell.array) / 2 + 1)
 
     unique_reps, unique_config, reps, count_configs = [], [], [], []
