@@ -1,0 +1,1 @@
+from .square_lattice import create_2d_square_data
