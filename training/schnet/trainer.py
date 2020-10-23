@@ -10,7 +10,7 @@ def get_trainer(args, model, train_loader, val_loader, metrics):
     # setup optimizer
     # filter for trainable parameters (https://github.com/pytorch/pytorch/issues/679)
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = Adam(trainable_params, lr=args.lr)
+    optimizer = Adam(trainable_params, lr=args.lr, weight_decay=args.l2reg)
 
     # setup hook and logging
     hooks = [spk.train.MaxEpochHook(args.max_epochs)]
@@ -26,6 +26,7 @@ def get_trainer(args, model, train_loader, val_loader, metrics):
         stop_after_min=True,
     )
     hooks.append(schedule)
+    hooks.append(PatchingHook())
 
     if args.logger == "csv":
         logger = spk.train.CSVHook(
@@ -83,3 +84,12 @@ class SavingHook(Hook):
             )
             self._save_counter += 1
             self._epoch_counter = 0
+
+class PatchingHook(Hook):
+    def __init__(self):
+        pass
+
+    def on_train_ends(self, trainer):
+        for mod in trainer._model.modules():
+            mod.dump_patches = True
+        torch.save(trainer._model, trainer.best_model)
