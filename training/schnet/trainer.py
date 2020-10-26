@@ -89,7 +89,6 @@ class PatchingHook(Hook):
     def __init__(self):
         pass
 
-    def on_train_ends(self, trainer):
+    def on_validation_begin(self, trainer):
         for mod in trainer._model.modules():
             mod.dump_patches = True
-        torch.save(trainer._model, trainer.best_model)
