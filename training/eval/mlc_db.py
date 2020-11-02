@@ -45,7 +45,7 @@ def main(args):
         for row in db.select():
             for i, prop in enumerate(args.properties):
                 answers[i].append(row.data[prop])
-            posinp.append(mlcalcdriver.interfaces.ase_atoms_to_posinp(row.toatoms()))
+            posinp.append(Posinp.from_ase(row.toatoms()))
 
             if len(posinp) == args.batch_size:
                 job = Job(posinp=posinp, calculator=calculator)

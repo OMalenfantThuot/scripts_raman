@@ -6,7 +6,6 @@ import ase
 import argparse
 from ase.db import connect
 from mybigdft import Posinp, Job, InputParams, Logfile
-from mlcalcdriver.interfaces import ase_atoms_to_posinp
 from shutil import rmtree, copyfile
 from copy import deepcopy
 
@@ -50,7 +49,7 @@ class DbReader:
             os.chdir("run_dir/")
             for i in range(1, db.count() + 1):
                 at = db.get_atoms(id=i)
-                pos = ase_atoms_to_posinp(at)
+                pos = Posinp.from_ase(at)
                 try:
                     os.makedirs("{}_{:06}".format(jobname, i))
                     os.chdir("{}_{:06}".format(jobname, i))
