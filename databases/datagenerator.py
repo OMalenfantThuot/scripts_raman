@@ -2,175 +2,197 @@
 
 from mybigdft import Posinp, InputParams, Job, Logfile
 from mybigdft.workflows import Geopt
+from abipy.abio.outputs import AbinitOutputFile
+from ase.io import read
+from ase.calculators.abinit import Abinit
 from shutil import rmtree, copyfile
 from copy import deepcopy
+import yaml
 import numpy as np
 import argparse
 import os
 
 
-class DataGenerator:
-    r"""
-    Drives DFT calculations by moving atoms around the equilibrium
-    positions.
-    """
+def create_parser():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
-    def __init__(self):
-        self.parser = self._create_parser()
-        args = self.parser.parse_args()
-        self.name = args.name
-        self.n_structs = args.n_structs
-        self.initpos = Posinp.from_file(args.name)
-        self.input = InputParams()
+    parser.add_argument(
+        "n_structs",
+        type=int,
+        help="Number of different structures to generate and calculate.",
+    )
+    runmode_subparser = parser.add_subparsers(
+        dest="run_mode", help="Choose the DFT code to generate data."
+    )
+
+    # BigDFT parser
+    bigdft_parser = runmode_subparser.add_parser(
+        "bigdft",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="BigDFT calculations.",
+    )
+
+    bigdft_parser.add_argument("posinp", help="Name of the initial positions file.")
+    bigdft_parser.add_argument(
+        "--no_pseudos",
+        help="Use pseudos for calculations",
+        default=True,
+        action="store_false",
+    )
+    bigdft_parser.add_argument(
+        "--nmpi", help="Number of mpi processes", type=int, default=6
+    )
+
+    # Abinit parser
+    abinit_parser = runmode_subparser.add_parser(
+        "abinit",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="Abinit calculations.",
+    )
+    abinit_parser.add_argument(
+        "positions", help="Name of the initial positions file(abinit format)"
+    )
+    abinit_parser.add_argument("input", help="Name of the yaml input file.")
+    return parser
+
+
+def main(args):
+    # Create directories
+    os.makedirs("run_dir/", exist_ok=True)
+    os.makedirs("saved_results/", exist_ok=True)
+
+    if args.run_mode == "bigdft":
+        jobname = args.posinp.split(".")[0]
+        initpos = Posinp.from_file(args.posinp)
+
+        inputpar = InputParams()
         for filename in [f for f in os.listdir() if f.endswith(".yaml")]:
             try:
-                self.input = InputParams.from_file(filename)
+                inputpar = InputParams.from_file(filename)
                 break
             except:
                 continue
-        self.pseudos = args.no_pseudos
-        self.nmpi = args.nmpi
-
-    def _create_parser(self):
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument("name", help="Name of the initial position file")
-        parser.add_argument(
-            "n_structs",
-            type=int,
-            help="Number of different structures to generate and calculate.",
-        )
-        parser.add_argument(
-            "--no_pseudos",
-            help="Use pseudos for calculations",
-            default=True,
-            action="store_false",
-        )
-        parser.add_argument(
-            "--nmpi", help="Number of mpi processes", type=int, default=6
-        )
-        return parser
-
-    def run(self):
-        r"""
-        """
-        # Create directories
-        os.makedirs("run_dir/", exist_ok=True)
-        os.makedirs("saved_results/", exist_ok=True)
-        jobname = self.name.split(".")[0]
 
         os.chdir("run_dir/")
-        os.makedirs("geopt/", exist_ok=True)
-        os.chdir("geopt/")
-        job = Job(
-            name=jobname,
-            posinp=self.initpos,
-            inputparams=self.input,
-            pseudos=self.pseudos,
-        )
-        geopt = Geopt(job, forcemax=1e-04)
-        geopt.run(nmpi=self.nmpi)
-        copyfile("final_{}.xyz".format(jobname), "../../saved_results/000000.xyz")
-        self.initpos = geopt.final_posinp
-        os.chdir("../")
-        for i in range(1, self.n_structs):
+        for i in range(args.n_structs):
             try:
                 os.makedirs("{}_{:06}".format(jobname, i))
                 os.chdir("{}_{:06}".format(jobname, i))
-                pos = self._generate_random_structure()
-                job = Job(
-                    name=jobname,
-                    posinp=pos,
-                    inputparams=self.input,
-                    pseudos=self.pseudos,
-                )
-                job.run(nmpi=self.nmpi)
-                copyfile(
-                    "forces_{}.xyz".format(jobname),
-                    "../../saved_results/{:06}.xyz".format(i),
-                )
-                os.chdir("../")
+                bigdft_run(i, initpos, args, jobname, inputpar, restart=False)
             except OSError:
                 os.chdir("{}_{:06}".format(jobname, i))
                 try:
                     log = Logfile.from_file("log-" + jobname + ".yaml")
                     print("Calculation {:06} was complete.\n".format(i))
+                    os.chdir("../")
                 except:
-                    pos = self._generate_random_structure()
-                    job = Job(
-                        name=jobname,
-                        posinp=pos,
-                        inputparams=self.input,
-                        pseudos=self.pseudos,
-                    )
-                    job.run(self.nmpi, restart_if_incomplete=True)
-                    copyfile(
-                        "forces_{}.xyz".format(jobname),
-                        "../../saved_results/{:06}.xyz".format(i),
-                    )
-                os.chdir("../")
+                    bigdft_run(i, initpos, args, jobname, inputpar, restart=True)
         os.chdir("../")
 
-    def _generate_random_structure(self):
-        pos = deepcopy(self.initpos)
-        atoms_idx = np.arange(len(pos))
-        n_translations = np.random.randint(len(pos)) + 1
-        trans_idx = np.random.choice(atoms_idx, n_translations)
-        for j in trans_idx:
-            pos = pos.translate_atom(j, 0.2 * np.random.random(3) - 0.1)
-        return pos
+    elif args.run_mode == "abinit":
+        jobname = args.positions.split(".")[0]
+        initatoms = read(args.positions, format="abinit-in")
+        with open(args.input, "r") as f:
+            inputs = yaml.load(f, Loader=yaml.BaseLoader)
+        calculator = Abinit(**inputs)
 
-    @property
-    def parser(self):
-        return self._parser
+        os.chdir("run_dir/")
+        for i in range(args.n_structs):
+            try:
+                os.makedirs("{}_{:06}".format(jobname, i))
+                os.chdir("{}_{:06}".format(jobname, i))
+                abinit_run(i, calculator, initatoms)
+            except FileExistsError:
+                os.chdir("{}_{:06}".format(jobname, i))
+                try:
+                    about = AbinitOutputFile("abinit.out")
+                    if about.run_completed:
+                        print("Calculation {:06} was complete.\n".format(i))
+                        os.chdir("../")
+                    else:
+                        restart(i, calculator, initatoms)
+                except:
+                    restart(i, calculator, initatoms)
+    else:
+        raise ValueError("The run_mode argument should be abinit or bigdft.")
 
-    @parser.setter
-    def parser(self, parser):
-        self._parser = parser
+def bigdft_run(i, initpos, args, jobname, inputpar, restart=False):
+    pos = bigdft_random_structure(initpos)
+    job = Job(
+        name=jobname,
+        posinp=pos,
+        inputparams=inputpar,
+        pseudos=args.no_pseudos,
+    )
+    job.run(nmpi=args.nmpi, restart_if_incomplete=restart)
+    copyfile(
+        "forces_{}.xyz".format(jobname),
+        "../../saved_results/{:06}.xyz".format(i),
+    )
+    os.chdir("../")
 
-    @property
-    def name(self):
-        return self._name
+def bigdft_random_structure(initpos):
+    pos = deepcopy(initpos)
+    atoms_idx = np.arange(len(pos))
+    n_translations = np.random.randint(len(pos)) + 1
+    trans_idx = np.random.choice(atoms_idx, n_translations)
+    for j in trans_idx:
+        phi = 2 * np.pi * np.random.rand()
+        theta = np.arccos(2 * np.random.rand() - 1)
+        r = -0.1
+        while r < 0:
+            r = np.random.normal(scale=0.1)
+        pos = pos.translate_atom(
+            j,
+            [
+                r * np.sin(theta) * np.cos(phi),
+                r * np.sin(theta) * np.sin(phi),
+                r * np.cos(theta),
+            ],
+        )
+    return pos
 
-    @name.setter
-    def name(self, name):
-        name = str(name)
-        if not os.path.exists(name):
-            raise NameError("No positions file found for the given name.")
-        self._name = name
+def restart(i, calculator, initatoms):
+    for f in os.listdir():
+        os.remove(f)
+    abinit_run(i, calculator, initatoms)
 
-    @property
-    def n_structs(self):
-        return self._n_structs
+def abinit_run(i, calculator, initatoms):
+    at = abinit_random_structure(initatoms)
+    at.set_calculator(calculator)
+    at.get_forces()
+    os.rename("abinit.txt", "abinit.out")
+    copyfile("abinit.out", "../../saved_results/{:06}.out".format(i))
+    for f in os.listdir():
+        if f.startswith("abinito_"):
+            os.remove(f)
+    print("Calculation {:06} completed.\n".format(i))
+    os.chdir("../")
 
-    @n_structs.setter
-    def n_structs(self, n_structs):
-        self._n_structs = int(n_structs)
-
-    @property
-    def initpos(self):
-        return self._initpos
-
-    @initpos.setter
-    def initpos(self, initpos):
-        self._initpos = initpos
-
-    @property
-    def pseudos(self):
-        return self._pseudos
-
-    @pseudos.setter
-    def pseudos(self, pseudos):
-        self._pseudos = pseudos
-
-    @property
-    def input(self):
-        return self._input
-
-    @input.setter
-    def input(self, input):
-        self._input = input
+def abinit_random_structure(initatoms):
+    at = deepcopy(initatoms)
+    atoms_idx = np.arange(len(at))
+    n_translations = np.random.randint(len(at)) + 1
+    trans_idx = np.random.choice(atoms_idx, n_translations)
+    for j in trans_idx:
+        phi = 2 * np.pi * np.random.rand()
+        theta = np.arccos(2 * np.random.rand() - 1)
+        r = -0.1
+        while r < 0:
+            r = np.random.normal(scale=0.1)
+        at.positions[j] = at.positions[j] + np.array(
+            [
+                r * np.sin(theta) * np.cos(phi),
+                r * np.sin(theta) * np.sin(phi),
+                r * np.cos(theta),
+            ]
+        )
+    return at
 
 
 if __name__ == "__main__":
-    gen = DataGenerator()
-    gen.run()
+    parser = create_parser()
+    args = parser.parse_args()
+    main(args)

@@ -60,14 +60,14 @@ def main(args):
                 results[i].append(job.results[prop])
             posinp = []
 
-
     header, error = [], []
     for prop in args.properties:
-        header += ["MAE_" + prop, "%Error_" + prop]
+        header += ["MAE_" + prop, "%Error_" + prop, "RMSE_" + prop]
     for l1, l2 in zip(answers, results):
         an, re = np.array(l1).flatten(), np.concatenate(l2).flatten()
         error.append(np.abs(an - re).mean())
         error.append(np.abs((an - re)/an).mean() * 100)
+        error.append(np.sqrt(np.mean((an - re)**2)))
 
     with open(eval_file, "w") as file:
         wr = csv.writer(file)
