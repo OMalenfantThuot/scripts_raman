@@ -10,7 +10,6 @@ from schnetpack.utils import (
     get_dataset,
     get_loaders,
     get_metrics,
-    get_model,
     setup_run,
     get_statistics,
     get_divide_by_atoms,
@@ -20,6 +19,7 @@ from schnetpack.utils.script_utils.settings import get_environment_provider
 from schnetpack.utils.script_utils.parsing import build_parser
 from schnetpack.utils.script_utils.model import get_output_module
 from trainer import get_trainer
+from model import get_model
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
@@ -28,6 +28,15 @@ def main(args):
 
     # setup
     train_args = setup_run(args)
+
+    # Default values for custom arguments
+    # Should use a custom parser at some point
+    for attr in ["l2reg", "dropout", "save_n_steps"]:
+        if not hasattr(args, attr):
+            args.__dict__.update({attr: 0})
+    if not hasattr(args, "n_layers"):
+        args.__dict__.update({"n_layers": 2})
+
     device = torch.device("cuda" if args.cuda else "cpu")
 
     # get dataset
