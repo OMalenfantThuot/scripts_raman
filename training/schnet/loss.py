@@ -5,11 +5,11 @@ def get_loss_fn(args):
     derivative = spk.utils.get_derivative(args)
     contributions = spk.utils.get_contributions(args)
     stress = spk.utils.get_stress(args)
-    if args.loss in ["default", "tilted_up", "tilted_down"]:
+    if args.loss in ["default", "tilted_up", "tilted_down", "relative_loss"]:
         loss = args.loss
     else:
         raise ValueError("The loss argument is not recognized.")
-    if loss == "default":
+    if loss in ["default", "relative_loss"]:
         # simple loss function for training on property only
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import simple_fn
@@ -53,9 +53,14 @@ def get_loss_fn(args):
             contributions=contributions,
             stress=stress,
         )
-        from utils.functions.schnet_loss import tradeoff_loss_fn
+        if loss == "default":
+            from utils.functions.schnet_loss import tradeoff_loss_fn
 
-        return tradeoff_loss_fn(rho, property_names)
+            return tradeoff_loss_fn(rho, property_names)
+        elif loss == "relative_loss":
+            from utils.functions.schnet_loss import relative_loss
+
+            return relative_loss(rho, property_names)
     elif loss == "tilted_down":
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import tilted_down
