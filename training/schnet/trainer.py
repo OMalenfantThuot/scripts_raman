@@ -2,6 +2,7 @@ from schnetpack.train.hooks import Hook
 import schnetpack as spk
 from loss import get_loss_fn
 from torch.optim import Adam
+from utils.models import SmoothTrainer
 import os
 import torch
 
@@ -51,17 +52,30 @@ def get_trainer(args, model, train_loader, val_loader, metrics):
     loss_fn = get_loss_fn(args)
 
     # setup trainer
-    trainer = spk.train.Trainer(
-        args.modelpath,
-        model,
-        loss_fn,
-        optimizer,
-        train_loader,
-        val_loader,
-        checkpoint_interval=args.checkpoint_interval,
-        keep_n_checkpoints=args.keep_n_checkpoints,
-        hooks=hooks,
-    )
+    if args.loss == "smooth":
+        trainer = SmoothTrainer(
+            args.modelpath,
+            model,
+            loss_fn,
+            optimizer,
+            train_loader,
+            val_loader,
+            checkpoint_interval=args.checkpoint_interval,
+            keep_n_checkpoints=args.keep_n_checkpoints,
+            hooks=hooks,
+        )
+    else:
+        trainer = spk.train.Trainer(
+            args.modelpath,
+            model,
+            loss_fn,
+            optimizer,
+            train_loader,
+            val_loader,
+            checkpoint_interval=args.checkpoint_interval,
+            keep_n_checkpoints=args.keep_n_checkpoints,
+            hooks=hooks,
+        )
     return trainer
 
 

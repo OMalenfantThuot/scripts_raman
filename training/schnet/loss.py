@@ -5,11 +5,11 @@ def get_loss_fn(args):
     derivative = spk.utils.get_derivative(args)
     contributions = spk.utils.get_contributions(args)
     stress = spk.utils.get_stress(args)
-    if args.loss in ["default", "tilted_up", "tilted_down", "relative_loss"]:
+    if args.loss in ["default", "tilted_up", "tilted_down", "relative_loss", "smooth"]:
         loss = args.loss
     else:
         raise ValueError("The loss argument is not recognized.")
-    if loss in ["default", "relative_loss"]:
+    if loss in ["default", "relative_loss", "smooth"]:
         # simple loss function for training on property only
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import simple_fn
@@ -18,7 +18,14 @@ def get_loss_fn(args):
 
         # loss function with tradeoff weights
         if type(args.rho) == float:
-            rho = dict(property=args.rho, derivative=1 - args.rho)
+            if loss == "smooth":
+                rho = {
+                    "property": args.rho,
+                    "derivative": 1 - args.rho,
+                    "hessian": 0.0001,
+                }
+            else:
+                rho = {"property": args.rho, "derivative": 1 - args.rho}
         else:
             rho = dict()
             rho["property"] = (
@@ -40,6 +47,11 @@ def get_loss_fn(args):
                 rho["stress"] = (
                     1.0 if "stress" not in args.rho.keys() else args.rho["stress"]
                 )
+            if loss == "smooth":
+                rho["hessian"] = (
+                    0.0001 if "hessian" not in args.rho.keys() else args.rho["hessian"]
+                )
+
             # type cast of rho values
             for key in rho.keys():
                 rho[key] = float(rho[key])
@@ -61,6 +73,10 @@ def get_loss_fn(args):
             from utils.functions.schnet_loss import relative_loss
 
             return relative_loss(rho, property_names)
+        elif loss == "smooth":
+            from utils.functions.schnet_loss import smooth_loss
+
+            return smooth_loss(rho, property_names)
     elif loss == "tilted_down":
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import tilted_down
