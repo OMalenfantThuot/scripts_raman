@@ -67,3 +67,20 @@ def relative_loss(rho, property_names):
         return loss
 
     return loss_fn
+
+
+def smooth_loss(rho, property_names):
+    def loss_fn(batch, result, noise_result):
+        loss = 0
+        for prop in rho.keys():
+            if prop != "hessian":
+                diff = (batch[property_names[prop]] - result[property_names[prop]]) ** 2
+                err_sq = rho[prop] * torch.mean(diff)
+                loss += err_sq
+        loss += rho["hessian"] * torch.norm(
+            result[property_names["derivative"]]
+            - noise_result[property_names["derivative"]]
+        )
+        return loss
+
+    return loss_fn
