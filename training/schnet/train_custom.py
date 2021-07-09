@@ -36,6 +36,8 @@ def main(args):
             args.__dict__.update({attr: 0})
     if not hasattr(args, "n_layers"):
         args.__dict__.update({"n_layers": 2})
+    if not hasattr(args, "normalize_filter"):
+        args.__dict__.update({"normalize_filter": False})
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
