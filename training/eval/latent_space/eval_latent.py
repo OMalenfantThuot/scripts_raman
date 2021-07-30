@@ -5,6 +5,7 @@ from schnetpack.utils import load_model
 from schnetpack.environment import AseEnvironmentProvider
 from mlcalcdriver.interfaces import SchnetPackData
 from schnetpack import AtomsLoader
+import numpy as np
 import pickle
 import torch
 import argparse
@@ -19,7 +20,7 @@ def main(args):
     cutoff = float(model.representation.interactions[0].cutoff_network.cutoff)
     n_neurons = model.representation.n_atom_basis
 
-    train_representations = torch.load(args.savepath)
+    train_representations = torch.load(args.savepath).to(device)
     results = {}
 
     with connect(args.dbpath) as db:
@@ -41,8 +42,9 @@ def main(args):
                 .reshape(natoms[i], 1, n_neurons)
                 .expand(natoms[i], train_representations.shape[0], n_neurons)
             )
-        distances = torch.linalg.norm(rep - train_representations, dim=2)
-        results[i] = distances.cpu().detach().numpy()
+        distances = torch.linalg.norm(rep - train_representations, dim=2).cpu().detach().numpy()
+        distances = np.mean(np.sort(distances)[:, :args.n_neighbors], axis=1)
+        results[i] = distances
 
     name = (
         args.name + ".pkl"
@@ -69,6 +71,7 @@ def create_parser():
     parser.add_argument(
         "--name", help="Name of the file to save the distances in (optional)."
     )
+    parser.add_argument("n_neighbors", help="Number of neighbors to consider.", type=int)
     parser.add_argument("--cuda", action="store_true", help="Wether to use cuda.")
     return parser
 

@@ -30,8 +30,9 @@ def main(args):
 
     for batch in data_loader:
         batch = {k: v.to(device) for k, v in batch.items()}
-        rep = model.representation(batch)
-        individual_reps.append(rep)
+        with torch.no_grad():
+            rep = model.representation(batch)
+        individual_reps.append(rep.cpu().detach())
     representations = torch.cat(individual_reps).reshape(-1, n_neurons)
 
     name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
