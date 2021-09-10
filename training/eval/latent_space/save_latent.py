@@ -2,43 +2,31 @@
 
 from ase.db import connect
 from schnetpack.utils import load_model
-from schnetpack.environment import AseEnvironmentProvider
-from mlcalcdriver.interfaces import SchnetPackData
-from schnetpack import AtomsLoader
+from utils.latentspace import get_latent_space_representations
 import argparse
 import torch
 import os
+
+r"""
+This executable saves the latent space reprsentations
+of all configurations in a dataset for a given trained model.
+They are saved as a (n_configurations, n_neurons) Tensor
+in a .pt file.
+"""
 
 
 def main(args):
 
     device = "cuda" if args.cuda else "cpu"
     model = load_model(args.modelpath, map_location=device)
-    cutoff = float(model.representation.interactions[0].cutoff_network.cutoff)
-    n_neurons = model.representation.n_atom_basis
-    individual_reps = []
 
     with connect(args.dbpath) as db:
-        n_struct = db.count()
         atoms = [row.toatoms() for row in db.select()]
-    data = SchnetPackData(
-        data=atoms,
-        environment_provider=AseEnvironmentProvider(cutoff=cutoff),
-        collect_triples=False,
-    )
-    data_loader = AtomsLoader(data, batch_size=1)
-
-    for batch in data_loader:
-        batch = {k: v.to(device) for k, v in batch.items()}
-        with torch.no_grad():
-            rep = model.representation(batch)
-        individual_reps.append(rep.cpu().detach())
-    representations = torch.cat(individual_reps).reshape(-1, n_neurons)
+    representations = get_latent_space_representations(model, atoms).cpu()
 
     name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
     name = name + ".pt"
     torch.save(representations, name)
-
 
 def create_parser():
     parser = argparse.ArgumentParser()

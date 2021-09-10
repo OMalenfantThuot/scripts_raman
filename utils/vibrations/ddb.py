@@ -19,8 +19,11 @@ class DDB(DdbFile):
             self.values[i] = None
 
     def get_prim_mode(self, qpoint, branch):
+        r"""
+        Returns the corresponding vibration mode in the primitive unit cell.
+        """
 
-        q_idx = np.where(np.all(self.qpoints.to_array() == qpoint, axis=1))[0]
+        q_idx = np.where(np.all(np.isclose(self.qpoints.to_array(), qpoint), axis=1))[0]
         if q_idx.size == 0:
             raise ValueError("Asked for qpoint is not in the database.")
         else:
@@ -51,7 +54,13 @@ class GrapheneDDB(DDB):
     r"""
     Specific subclass to work with graphene supercells.
     """
-    def __init__(self, filepath, supercell_size):
+    def __init__(self, filepath):
+        super(GrapheneDDB, self).__init__(filepath)
+
+        size = np.sqrt(len(self.qpoints))
+        assert size%1 == 0, "The qpoints grid is compatible with a homogeneous supercell."
+        self.size = int(size)
+
         prim = Atoms(
             symbols="C2",
             cell=[
@@ -63,11 +72,9 @@ class GrapheneDDB(DDB):
             pbc=True,
         )
         atoms = make_supercell(
-            prim, [[supercell_size[0], 0, 0], [0, supercell_size[1], 0], [0, 0, 1]]
+            prim, [[self.size, 0, 0], [0, self.size, 0], [0, 0, 1]]
         )
-        self.supercell_size = supercell_size
         self.atoms = atoms
-        super(GrapheneDDB, self).__init__(filepath)
 
 
     def build_supercell_modes(self, qpoint, branch, amplitudes=None):
@@ -85,8 +92,8 @@ class GrapheneDDB(DDB):
         a1, a2 = lattice[0], lattice[1]
 
         pieces = []
-        for m in range(self.supercell_size[0]):
-            for n in range(self.supercell_size[1]):
+        for m in range(self.size):
+            for n in range(self.size):
                 rvec = a1 * m + a2 * n
                 piece = prim_displacement * np.exp(1j * np.dot(qpoint, rvec))
                 pieces.append(piece.reshape(-1, 3))
