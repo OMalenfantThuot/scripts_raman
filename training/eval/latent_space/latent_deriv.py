@@ -4,6 +4,7 @@ from utils.vibrations import GrapheneDDB
 from schnetpack.utils import load_model
 from schnetpack.environment import AseEnvironmentProvider
 from mlcalcdriver.interfaces import SchnetPackData
+from utils.latentspace import get_latent_space_representations
 from schnetpack import AtomsLoader
 import numpy as np
 import torch
@@ -33,32 +34,18 @@ def main(args):
 
     for i, qpoint in enumerate(mlph.path.kpts):
         for branch in range(6):
-            if i%100 == 0:
+            if i % 100 == 0:
                 print("qpoint #{}".format(i))
             displacements = ddb.build_supercell_modes(
                 qpoint, branch, amplitudes=args.amp
             )
-            data = SchnetPackData(
-                data=displacements,
-                environment_provider=AseEnvironmentProvider(cutoff=cutoff),
-                collect_triples=False,
-            )
-            data_loader = AtomsLoader(data)
-
-            batch_reps = []
-            for batch in data_loader:
-                batch = {k: v.to(device) for k, v in batch.items()}
-                with torch.no_grad():
-                    rep = model.representation(batch)
-                    batch_reps.append(rep.detach())
-            representations = (
-                torch.cat(batch_reps)
-                .reshape(len(displacements[0]) * len(displacements), 1, n_neurons)
-                .expand(
-                    len(displacements[0]) * len(displacements),
-                    train_representations.shape[0],
-                    n_neurons,
-                )
+            representations = get_latent_space_representations(model, displacements)
+            representations = representations.reshape(
+                len(displacements[0]) * len(displacements), 1, n_neurons
+            ).expand(
+                len(displacements[0]) * len(displacements),
+                train_representations.shape[0],
+                n_neurons,
             )
             distances = (
                 torch.linalg.norm(representations - train_representations, dim=2)

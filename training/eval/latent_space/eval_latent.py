@@ -2,22 +2,26 @@
 
 from ase.db import connect
 from schnetpack.utils import load_model
-from schnetpack.environment import AseEnvironmentProvider
-from mlcalcdriver.interfaces import SchnetPackData
-from schnetpack import AtomsLoader
+from utils.latentspace import get_latent_space_representations
 import numpy as np
 import pickle
 import torch
 import argparse
-import torch
-import os
+
+r"""
+This executable needs a saved representation from 'save_latent.py'.
+It calculates the representations of a test set and returns the distances
+of each atom of each test configuration comapred to the training set.
+This distance can be dependent on a certain numebr of nearest neighbors
+(lower is closer) or a gaussian weighted sum on all points of the training set
+(larger is closer).
+"""
 
 
 def main(args):
 
     device = "cuda" if args.cuda else "cpu"
     model = load_model(args.modelpath, map_location=device)
-    cutoff = float(model.representation.interactions[0].cutoff_network.cutoff)
     n_neurons = model.representation.n_atom_basis
 
     train_representations = torch.load(args.savepath).to(device)
@@ -27,23 +31,22 @@ def main(args):
         n_struct = db.count()
         atoms = [row.toatoms() for row in db.select()]
         natoms = [len(atom) for atom in atoms]
-    data = SchnetPackData(
-        data=atoms,
-        environment_provider=AseEnvironmentProvider(cutoff=cutoff),
-        collect_triples=False,
-    )
-    data_loader = AtomsLoader(data, batch_size=1)
-
-    for i, batch in enumerate(data_loader):
-        batch = {k: v.to(device) for k, v in batch.items()}
-        with torch.no_grad():
-            rep = (
-                model.representation(batch)
-                .reshape(natoms[i], 1, n_neurons)
-                .expand(natoms[i], train_representations.shape[0], n_neurons)
-            )
-        distances = torch.linalg.norm(rep - train_representations, dim=2).cpu().detach().numpy()
-        distances = np.mean(np.sort(distances)[:, :args.n_neighbors], axis=1)
+    for i, atom in enumerate(atoms):
+        representations = get_latent_space_representations(model, [atom])
+        representations = representations.reshape(natoms[i], 1, n_neurons).expand(
+            natoms[i], train_representations.shape[0], n_neurons
+        )
+        distances = (
+            torch.linalg.norm(representations - train_representations, dim=2)
+            .cpu()
+            .detach()
+            .numpy()
+        )
+        if args.distances_mode == "neighbors":
+            distances = np.mean(np.sort(distances)[:, : args.n_neighbors], axis=1)
+        elif args.distances_mode == "gaussians":
+            distances = np.float64(distances)
+            distances = np.sum(np.exp(-distances / (2 * args.std)), axis=1)
         results[i] = distances
 
     name = (
@@ -56,7 +59,9 @@ def main(args):
 
 
 def create_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument(
         "dbpath", help="Path to the database to get the latent space distances for.",
     )
@@ -71,8 +76,28 @@ def create_parser():
     parser.add_argument(
         "--name", help="Name of the file to save the distances in (optional)."
     )
-    parser.add_argument("n_neighbors", help="Number of neighbors to consider.", type=int)
     parser.add_argument("--cuda", action="store_true", help="Wether to use cuda.")
+    parser.add_argument(
+        "--distances_mode",
+        choices=["neighbors", "gaussians"],
+        default="gaussians",
+        help="""
+            Distance can be either mean of the nearest neighbors
+            or the gaussian sum of all the training points.
+            """,
+    )
+    parser.add_argument(
+        "--n_neighbors",
+        help="Number of neighbors to consider (only needed for the neighbors distances).",
+        type=int,
+        default=10,
+    )
+    parser.add_argument(
+        "--std",
+        help="Standard deviation for the gaussian sum.",
+        type=float,
+        default=0.1,
+    )
     return parser
 
 
