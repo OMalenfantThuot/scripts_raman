@@ -12,6 +12,7 @@ class DDB(DdbFile):
     Custom object to add some functionalities to the abipy
     version of the DdbFile.
     """
+
     def __init__(self, filepath):
         super(DDB, self).__init__(filepath)
         self.values = {}
@@ -54,11 +55,14 @@ class GrapheneDDB(DDB):
     r"""
     Specific subclass to work with graphene supercells.
     """
+
     def __init__(self, filepath):
         super(GrapheneDDB, self).__init__(filepath)
 
         size = np.sqrt(len(self.qpoints))
-        assert size%1 == 0, "The qpoints grid is compatible with a homogeneous supercell."
+        assert (
+            size % 1 == 0
+        ), "The qpoints grid is not compatible with a homogeneous supercell."
         self.size = int(size)
 
         prim = Atoms(
@@ -71,11 +75,8 @@ class GrapheneDDB(DDB):
             positions=[[0.0, 0.0, 5.0], [1.23292308, 0.71182847, 5.0]],
             pbc=True,
         )
-        atoms = make_supercell(
-            prim, [[self.size, 0, 0], [0, self.size, 0], [0, 0, 1]]
-        )
+        atoms = make_supercell(prim, [[self.size, 0, 0], [0, self.size, 0], [0, 0, 1]])
         self.atoms = atoms
-
 
     def build_supercell_modes(self, qpoint, branch, amplitudes=None):
         r"""
@@ -85,19 +86,21 @@ class GrapheneDDB(DDB):
         qpoint = np.array(qpoint)
         if amplitudes is None:
             amplitudes = [0.05]
+        elif not isinstance(amplitudes, (list, tuple)):
+            amplitudes = [amplitudes]
 
-        prim_displacement = self.get_prim_mode(qpoint, branch)
+        prim_displacement = self.get_prim_mode(qpoint, branch).real
 
-        lattice = self.structure.lattice.matrix
-        a1, a2 = lattice[0], lattice[1]
-
-        pieces = []
-        for m in range(self.size):
-            for n in range(self.size):
-                rvec = a1 * m + a2 * n
-                piece = prim_displacement * np.exp(1j * np.dot(qpoint, rvec))
-                pieces.append(piece.reshape(-1, 3))
-        supercell_displacement = np.concatenate(pieces).real
+        mesh = np.meshgrid(range(self.size), range(self.size), range(1))
+        coords = np.concatenate(
+            [mesh[1].reshape(-1, 1), mesh[0].reshape(-1, 1), mesh[2].reshape(-1, 1)],
+            axis=1,
+        )
+        phases = np.exp(1j * 2 * np.pi * np.dot(coords, qpoint)).real
+        supercell_displacement = (
+            prim_displacement
+            * np.broadcast_to(phases.reshape(phases.shape[0], 1), (phases.shape[0], 6))
+        ).real.reshape(-1, 3)
 
         modes = []
         for amp in amplitudes:
