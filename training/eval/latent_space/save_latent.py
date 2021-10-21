@@ -8,7 +8,7 @@ import torch
 import os
 
 r"""
-This executable saves the latent space reprsentations
+This executable saves the latent space representations
 of all configurations in a dataset for a given trained model.
 They are saved as a (n_configurations, n_neurons) Tensor
 in a .pt file.
@@ -25,7 +25,7 @@ def main(args):
     representations = get_latent_space_representations(model, atoms).cpu()
 
     name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
-    name = name + ".pt"
+    name = name if name.endswith(".pt") else name + ".pt"
     torch.save(representations, name)
 
 def create_parser():

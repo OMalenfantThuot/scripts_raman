@@ -11,7 +11,7 @@ import argparse
 r"""
 This executable needs a saved representation from 'save_latent.py'.
 It calculates the representations of a test set and returns the distances
-of each atom of each test configuration comapred to the training set.
+of each atom of each test configuration compared to the training set.
 This distance can be dependent on a certain numebr of nearest neighbors
 (lower is closer) or a gaussian weighted sum on all points of the training set
 (larger is closer).
