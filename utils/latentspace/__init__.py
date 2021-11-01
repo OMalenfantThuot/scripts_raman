@@ -1,1 +1,1 @@
-from .evaluation import get_latent_space_representations
+from .evaluation import get_latent_space_representations, get_latent_space_distances

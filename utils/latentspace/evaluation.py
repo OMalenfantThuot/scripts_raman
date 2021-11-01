@@ -25,3 +25,35 @@ def get_latent_space_representations(model, atoms, batch_size=1):
 
     representations = torch.cat(individual_reps).reshape(-1, n_neurons)
     return representations
+
+
+def get_latent_space_distances(
+    representations, train_representations, metric="euclidian"
+):
+
+    if metric == "euclidian":
+        distances = (
+            torch.linalg.norm(representations - train_representations, dim=2)
+            .cpu()
+            .detach()
+            .numpy()
+        )
+
+    elif metric == "scaled_max":
+        factors = (
+            torch.max(train_representations, dim=0).values
+            - torch.min(train_representations, dim=0).values
+        )
+        factors /= torch.max(factors)
+
+        distances = (representations - train_representations) * factors
+        distances = torch.linalg.norm(distances, dim=2).cpu().detach().numpy()
+
+    elif metric == "scaled_std":
+        factors = torch.std(train_representations, dim=0)
+        factors /= torch.max(factors)
+
+        distances = (representations - train_representations) * factors
+        distances = torch.linalg.norm(distances, dim=2).cpu().detach().numpy()
+
+    return distances

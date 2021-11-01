@@ -2,7 +2,10 @@
 
 from ase.db import connect
 from schnetpack.utils import load_model
-from utils.latentspace import get_latent_space_representations
+from utils.latentspace import (
+    get_latent_space_representations,
+    get_latent_space_distances,
+)
 import numpy as np
 import pickle
 import torch
@@ -36,11 +39,8 @@ def main(args):
         representations = representations.reshape(natoms[i], 1, n_neurons).expand(
             natoms[i], train_representations.shape[0], n_neurons
         )
-        distances = (
-            torch.linalg.norm(representations - train_representations, dim=2)
-            .cpu()
-            .detach()
-            .numpy()
+        distances = get_latent_space_distances(
+            representations, train_representations, metric=args.metric
         )
         if args.distances_mode == "neighbors":
             distances = np.mean(np.sort(distances)[:, : args.n_neighbors], axis=1)
@@ -77,6 +77,12 @@ def create_parser():
         "--name", help="Name of the file to save the distances in (optional)."
     )
     parser.add_argument("--cuda", action="store_true", help="Wether to use cuda.")
+    parser.add_argument(
+        "--metric",
+        choices=["euclidian", "scaled_max", "scaled_std"],
+        help="Metric to use to calculate the distance.",
+        default="euclidian",
+    )
     parser.add_argument(
         "--distances_mode",
         choices=["neighbors", "gaussians"],
