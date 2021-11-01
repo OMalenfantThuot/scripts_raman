@@ -63,11 +63,11 @@ def main(args):
 
     header, error = [], []
     if args.detailed:
-        full_err, full_std = {}, {}
+        full_err, full_std, full_dft = {}, {}, {}
     for prop in args.properties:
         header += ["MAE_" + prop, "%Error_" + prop, "STD_" + prop]
         if args.detailed:
-            full_err[prop], full_std[prop] = [], []
+            full_err[prop], full_std[prop], full_dft[prop] = [], [], []
     for p, l1, l2, l3 in zip(args.properties, answers, results, stds):
         an, re, std = (
             np.array(l1).flatten(),
@@ -80,6 +80,7 @@ def main(args):
         if args.detailed:
             full_err[p].append(np.abs(an - re))
             full_std[p].append(std)
+            full_dft[p].append(an)
 
     with open(eval_file, "w") as file:
         wr = csv.writer(file)
@@ -90,6 +91,8 @@ def main(args):
             pickle.dump(full_err, f)
         with open(eval_name + "_std.pkl", "wb") as f:
             pickle.dump(full_std, f)
+        with open(eval_name + "_dft.pkl", "wb") as f:
+            pickle.dump(full_dft, f)
 
 
 if __name__ == "__main__":
