@@ -15,11 +15,13 @@ class DDB(DdbFile):
 
     def __init__(self, filepath):
         super(DDB, self).__init__(filepath)
-        self.values = {}
+        self.modes = {}
+        self.energies = {}
         for i in range(len(self.qpoints)):
-            self.values[i] = None
+            self.modes[i] = None
+            self.energies[i] = None
 
-    def get_prim_mode(self, qpoint, branch):
+    def get_prim_mode(self, qpoint, branch, energies=False):
         r"""
         Returns the corresponding vibration mode in the primitive unit cell.
         """
@@ -30,7 +32,7 @@ class DDB(DdbFile):
         else:
             q_idx = int(q_idx)
 
-        if self.values[q_idx] is None:
+        if self.modes[q_idx] is None:
             shutil.rmtree("./tmp", ignore_errors=True)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -43,12 +45,14 @@ class DDB(DdbFile):
                     verbose=0,
                     anaddb_kwargs={"eivec": 1},
                 )
-            self.values[q_idx] = bands.dyn_mat_eigenvect[0][
-                np.argsort(bands.phfreqs)[0]
-            ]
+            self.modes[q_idx] = bands.dyn_mat_eigenvect[0][np.argsort(bands.phfreqs)[0]]
+            self.energies[q_idx] = np.sort(bands.phfreqs[0])
 
-        prim_displacement = self.values[q_idx][int(branch)]
-        return prim_displacement
+        prim_displacement = self.modes[q_idx][int(branch)]
+        if not energies:
+            return prim_displacement
+        else:
+            return prim_displacement, self.energies[q_idx][int(branch)]
 
 
 class GrapheneDDB(DDB):
@@ -77,8 +81,15 @@ class GrapheneDDB(DDB):
         )
         atoms = make_supercell(prim, [[self.size, 0, 0], [0, self.size, 0], [0, 0, 1]])
         self.atoms = atoms
+        mesh = np.meshgrid(range(self.size), range(self.size))
+        xlat, ylat, _ = self.structure.lattice_vectors()
+        self.real_vectors = (
+            mesh[1].reshape(-1, 1) * xlat + mesh[0].reshape(-1, 1) * ylat
+        )
 
-    def build_supercell_modes(self, qpoint, branch, amplitudes=None):
+    def build_supercell_modes(
+        self, qpoint, branch, amplitudes=None, return_positions=True, energies=False
+    ):
         r"""
         Returns the Atoms with the perburbations corresponding to a specific qpoint
         and branch. Will return one perturbation for each amplitude given.
@@ -89,26 +100,49 @@ class GrapheneDDB(DDB):
         elif not isinstance(amplitudes, (list, tuple)):
             amplitudes = [amplitudes]
 
-        prim_displacement = self.get_prim_mode(qpoint, branch).real
+        if not energies:
+            prim_displacement = self.get_prim_mode(qpoint, branch)
+        else:
+            prim_displacement, freq = self.get_prim_mode(qpoint, branch, energies=True)
 
-        mesh = np.meshgrid(range(self.size), range(self.size), range(1))
-        coords = np.concatenate(
-            [mesh[1].reshape(-1, 1), mesh[0].reshape(-1, 1), mesh[2].reshape(-1, 1)],
-            axis=1,
-        )
-        phases = np.exp(1j * 2 * np.pi * np.dot(coords, qpoint)).real
+        qpoint = np.dot(qpoint, self.structure.reciprocal_lattice.matrix)
+
+        # mesh = np.meshgrid(range(self.size), range(self.size), range(1))
+        # x,y,_ = self.structure.lattice_vectors()
+        # coords = np.concatenate(
+        #    [mesh[1].reshape(-1, 1), mesh[0].reshape(-1, 1), mesh[2].reshape(-1, 1)],
+        #    axis=1,
+        # )
+        # print(coords)
+        # rvecs = (mesh[1] * x + mesh[0] * y).reshape(-1,3)
+        # print(rvecs)
+        # phases = np.exp(1j * 2 * np.pi * np.dot(coords, qpoint))
+        #print(qpoint)
+        #print(np.dot(self.real_vectors, qpoint))
+        phases = np.exp(1j * np.dot(self.real_vectors, qpoint))
         supercell_displacement = (
             prim_displacement
             * np.broadcast_to(phases.reshape(phases.shape[0], 1), (phases.shape[0], 6))
-        ).real.reshape(-1, 3)
+        ).reshape(-1, 3)
 
         modes = []
         for amp in amplitudes:
-            new_positions = (
-                self.atoms.positions
-                + amp * supercell_displacement / np.max(supercell_displacement)
-            )
-            new_atoms = deepcopy(self.atoms)
-            new_atoms.positions = new_positions
-            modes.append(new_atoms)
-        return modes
+            modes.append(amp * supercell_displacement / np.max(supercell_displacement))
+        if not return_positions:
+            if not energies:
+                return np.array(modes)[0]
+            else:
+                return np.array(modes)[0], freq
+
+        else:
+            outatoms = []
+            for mode in modes:
+                new_positions = self.atoms.positions + mode
+                new_atoms = deepcopy(self.atoms)
+                new_atoms.positions = new_positions
+                outatoms.append(new_atoms)
+
+            if not energies:
+                return outatoms
+            else:
+                return outatoms, freq
