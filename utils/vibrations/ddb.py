@@ -93,6 +93,15 @@ class GrapheneDDB(DDB):
         r"""
         Returns the Atoms with the perburbations corresponding to a specific qpoint
         and branch. Will return one perturbation for each amplitude given.
+
+        Optional keywords
+        -----------------
+        return_positions:
+            If True, returns an ase.Atoms instance of the positions. If False, only returns
+            the actual perturbation in a numpy array. Default is True.
+
+        energies:
+            If True, returns the associated vibrational energy as well. Default is False.
         """
         qpoint = np.array(qpoint)
         if amplitudes is None:
@@ -107,18 +116,6 @@ class GrapheneDDB(DDB):
 
         qpoint = np.dot(qpoint, self.structure.reciprocal_lattice.matrix)
 
-        # mesh = np.meshgrid(range(self.size), range(self.size), range(1))
-        # x,y,_ = self.structure.lattice_vectors()
-        # coords = np.concatenate(
-        #    [mesh[1].reshape(-1, 1), mesh[0].reshape(-1, 1), mesh[2].reshape(-1, 1)],
-        #    axis=1,
-        # )
-        # print(coords)
-        # rvecs = (mesh[1] * x + mesh[0] * y).reshape(-1,3)
-        # print(rvecs)
-        # phases = np.exp(1j * 2 * np.pi * np.dot(coords, qpoint))
-        #print(qpoint)
-        #print(np.dot(self.real_vectors, qpoint))
         phases = np.exp(1j * np.dot(self.real_vectors, qpoint))
         supercell_displacement = (
             prim_displacement

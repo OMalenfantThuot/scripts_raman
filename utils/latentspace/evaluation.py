@@ -5,6 +5,11 @@ from schnetpack.environment import AseEnvironmentProvider
 
 
 def get_latent_space_representations(model, atoms, batch_size=1):
+    r"""
+    Function that returns an (N_atoms x N_neurons) Tensor containing the latent
+    space representation of the configurations of in a dataset for a given 
+    trained model.
+    """
 
     cutoff = float(model.representation.interactions[0].cutoff_network.cutoff)
     n_neurons = model.representation.n_atom_basis
@@ -30,6 +35,21 @@ def get_latent_space_representations(model, atoms, batch_size=1):
 def get_latent_space_distances(
     representations, train_representations, metric="euclidian"
 ):
+    r"""
+    Function that returns the distances between every atoms in a test set (representations)
+    and every atoms in a training set (train_representations). The way those distances are 
+    calculated is dependent on the chosen metric (Default is euclidian distance).
+
+    Choices of the metric keyword values:
+
+    euclidian: Uses euclidian distances where every dimension is weighted equally.
+
+    scaled_max: Every dimension is scaled proportionaly to the maximum width in that same
+        dimension between any atoms in the training set.
+
+    scaled_std: Similar to scaled_max, but scaled proportionaly to the standard deviation
+        instead of the maximum.
+    """
 
     if metric == "euclidian":
         distances = (
