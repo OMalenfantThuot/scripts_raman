@@ -37,7 +37,7 @@ def main(args):
         natoms = [len(atom) for atom in atoms]
 
     for i, atom in enumerate(atoms):
-        inputs = get_latent_space_representations(model, [atom])
+        inputs = get_latent_space_representations(model, atom)
         factors = get_scaling_factors(
             inputs, train_representations, metric=args.metric, model=model
         ).to(device)

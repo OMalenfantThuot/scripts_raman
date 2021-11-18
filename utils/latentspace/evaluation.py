@@ -11,6 +11,9 @@ def get_latent_space_representations(model, atoms):
     trained model.
     """
 
+    if not isinstance(atoms, list):
+        atoms = [atoms]
+
     cutoff = float(model.representation.interactions[0].cutoff_network.cutoff)
     n_neurons = model.representation.n_atom_basis
 
