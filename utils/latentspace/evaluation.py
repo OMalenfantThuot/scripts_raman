@@ -4,7 +4,7 @@ from mlcalcdriver.interfaces import SchnetPackData
 from schnetpack.environment import AseEnvironmentProvider
 
 
-def get_latent_space_representations(model, atoms, batch_size=1):
+def get_latent_space_representations(model, atoms):
     r"""
     Function that returns an (N_atoms x N_neurons) Tensor containing the latent
     space representation of the configurations of in a dataset for a given 
@@ -19,21 +19,49 @@ def get_latent_space_representations(model, atoms, batch_size=1):
         environment_provider=AseEnvironmentProvider(cutoff=cutoff),
         collect_triples=False,
     )
-    data_loader = AtomsLoader(data, batch_size=batch_size)
+    data_loader = AtomsLoader(data, batch_size=1)
 
-    individual_reps = []
     for batch in data_loader:
         batch = {k: v.to(next(model.parameters()).device) for k, v in batch.items()}
         with torch.no_grad():
             rep = model.representation(batch)
-        individual_reps.append(rep.detach())
+        batch["representation"] = rep
+        return batch
 
-    representations = torch.cat(individual_reps).reshape(-1, n_neurons)
-    return representations
+
+def get_scaling_factors(inputs, train_representations, metric="euclidian", model=None):
+
+    if metric == "euclidian":
+        factors = torch.ones(train_representations.shape[1])
+
+    elif metric == "scaled_max":
+        factors = (
+            torch.max(train_representations, dim=0).values
+            - torch.min(train_representations, dim=0).values
+        )
+        factors /= torch.max(factors)
+
+    elif metric == "scaled_std":
+        factors = torch.std(train_representations, dim=0)
+        factors /= torch.max(factors)
+
+    elif metric == "gradient":
+        inputs["representation"].requires_grad_()
+        outputmod = model.output_modules[0]
+        outputmod.derivative = None
+        out = outputmod(inputs)
+
+        (factors,) = torch.abs(
+            torch.autograd.grad(
+                out["energy"], inputs["representation"], torch.ones_like(out["energy"])
+            )[0]
+        )
+
+    return factors
 
 
 def get_latent_space_distances(
-    representations, train_representations, metric="euclidian"
+    representations, train_representations, factors, metric=None
 ):
     r"""
     Function that returns the distances between every atoms in a test set (representations)
@@ -51,29 +79,9 @@ def get_latent_space_distances(
         instead of the maximum.
     """
 
-    if metric == "euclidian":
-        distances = (
-            torch.linalg.norm(representations - train_representations, dim=2)
-            .cpu()
-            .detach()
-            .numpy()
-        )
+    if metric == "gradient":
+        factors = factors.reshape(factors.shape[0], 1, factors.shape[1])
 
-    elif metric == "scaled_max":
-        factors = (
-            torch.max(train_representations, dim=0).values
-            - torch.min(train_representations, dim=0).values
-        )
-        factors /= torch.max(factors)
-
-        distances = (representations - train_representations) * factors
-        distances = torch.linalg.norm(distances, dim=2).cpu().detach().numpy()
-
-    elif metric == "scaled_std":
-        factors = torch.std(train_representations, dim=0)
-        factors /= torch.max(factors)
-
-        distances = (representations - train_representations) * factors
-        distances = torch.linalg.norm(distances, dim=2).cpu().detach().numpy()
-
+    distances = (representations - train_representations) * factors
+    distances = torch.linalg.norm(distances, dim=2).cpu().detach().numpy()
     return distances

@@ -22,7 +22,9 @@ def main(args):
 
     with connect(args.dbpath) as db:
         atoms = [row.toatoms() for row in db.select()]
-    representations = get_latent_space_representations(model, atoms).cpu()
+    representations = get_latent_space_representations(model, atoms)["representation"][
+        0
+    ].cpu()
 
     name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
     name = name if name.endswith(".pt") else name + ".pt"

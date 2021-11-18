@@ -134,7 +134,7 @@ class GrapheneDDB(DDB):
         else:
             outatoms = []
             for mode in modes:
-                new_positions = self.atoms.positions + mode
+                new_positions = self.atoms.positions + mode.real
                 new_atoms = deepcopy(self.atoms)
                 new_atoms.positions = new_positions
                 outatoms.append(new_atoms)

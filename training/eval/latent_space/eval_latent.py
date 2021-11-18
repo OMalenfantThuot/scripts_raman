@@ -5,6 +5,7 @@ from schnetpack.utils import load_model
 from utils.latentspace import (
     get_latent_space_representations,
     get_latent_space_distances,
+    get_scaling_factors,
 )
 import numpy as np
 import pickle
@@ -34,13 +35,18 @@ def main(args):
         n_struct = db.count()
         atoms = [row.toatoms() for row in db.select()]
         natoms = [len(atom) for atom in atoms]
+
     for i, atom in enumerate(atoms):
-        representations = get_latent_space_representations(model, [atom])
+        inputs = get_latent_space_representations(model, [atom])
+        factors = get_scaling_factors(
+            inputs, train_representations, metric=args.metric, model=model
+        ).to(device)
+        representations = inputs["representation"]
         representations = representations.reshape(natoms[i], 1, n_neurons).expand(
             natoms[i], train_representations.shape[0], n_neurons
         )
         distances = get_latent_space_distances(
-            representations, train_representations, metric=args.metric
+            representations, train_representations, factors, metric=args.metric,
         )
         if args.distances_mode == "neighbors":
             distances = np.mean(np.sort(distances)[:, : args.n_neighbors], axis=1)
@@ -79,7 +85,7 @@ def create_parser():
     parser.add_argument("--cuda", action="store_true", help="Wether to use cuda.")
     parser.add_argument(
         "--metric",
-        choices=["euclidian", "scaled_max", "scaled_std"],
+        choices=["euclidian", "scaled_max", "scaled_std", "gradient"],
         help="Metric to use to calculate the distance.",
         default="euclidian",
     )
