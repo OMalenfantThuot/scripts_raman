@@ -19,16 +19,19 @@ def main(args):
 
     device = "cuda" if args.cuda else "cpu"
     model = load_model(args.modelpath, map_location=device)
+    name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
+    name = name if name.endswith(".pt") else name + ".pt"
 
     with connect(args.dbpath) as db:
         atoms = [row.toatoms() for row in db.select()]
-    representations = get_latent_space_representations(model, atoms)["representation"][
-        0
-    ].cpu()
+    batch = get_latent_space_representations(model, atoms, output_rep=args.output)
 
-    name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
-    name = name if name.endswith(".pt") else name + ".pt"
+    if args.output == False:
+        representations = batch["representation"].cpu()
+    else:
+        representations = batch["output"].cpu()
     torch.save(representations, name)
+
 
 def create_parser():
     parser = argparse.ArgumentParser()
@@ -43,7 +46,12 @@ def create_parser():
     parser.add_argument(
         "--name", help="Name of the file to save the Tensors in (optional)."
     )
-    parser.add_argument("--cuda", action="store_true", help="Wether to use cuda.")
+    parser.add_argument("--cuda", action="store_true", help="Whether to use cuda.")
+    parser.add_argument(
+        "--output",
+        action="store_true",
+        help="Return the output module's latent space instead of the representation block's.",
+    )
     return parser
 
 
