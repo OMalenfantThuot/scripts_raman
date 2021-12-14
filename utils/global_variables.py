@@ -10,4 +10,6 @@ atref[2, 0] = -75.0
 atref[6, 0] = -180.0
 atref[7, 0] = -278.0
 atref[8, 0] = -432.0
+atref[31, 0] = -3.0
+atref[52, 0] = -3.0
 DEFAULT_METADATA = {"atomrefs": atref.tolist(), "atref_labels": ["energy"]}
