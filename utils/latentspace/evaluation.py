@@ -4,8 +4,6 @@ from mlcalcdriver.interfaces import SchnetPackData
 from schnetpack.environment import AseEnvironmentProvider
 from utils.models import LatentAtomwise
 
-# from schnetpack.nn import shifted_softplus
-
 
 def get_latent_space_representations(model, atoms, output_rep=False, latent_out=None):
     r"""
@@ -65,9 +63,13 @@ def get_latent_space_representations(model, atoms, output_rep=False, latent_out=
             return batch
 
 
-def get_scaling_factors(inputs, train_representations, scaling="isotropic", model=None):
+def get_scaling_factors(train_representations,inputs=None, scaling="isotropic", model=None):
+    r"""
+    Returns scaling factors to apply to the distances in every dimension
+    before calculating the total distance.
+    """
 
-    if scaling in ["isotropic"]:
+    if scaling == "isotropic":
         factors = torch.ones(train_representations.shape[1])
 
     elif scaling == "scaled_max":
@@ -75,11 +77,9 @@ def get_scaling_factors(inputs, train_representations, scaling="isotropic", mode
             torch.max(train_representations, dim=0).values
             - torch.min(train_representations, dim=0).values
         )
-        factors /= torch.max(factors)
 
     elif scaling == "scaled_std":
         factors = torch.std(train_representations, dim=0)
-        factors /= torch.max(factors)
 
     elif scaling == "gradient":
         inputs["representation"].requires_grad_()
@@ -93,26 +93,23 @@ def get_scaling_factors(inputs, train_representations, scaling="isotropic", mode
             )[0]
         )
 
-    return factors
+    elif scaling == "weights":
+        outputmod = model.output_modules[0]
+        factors = torch.abs(torch.squeeze(outputmod.out_net[1].out_net[-1].weight.detach()))
+
+    else:
+        raise ValueError("The scaling {} is not recognized.".format(scaling))
+
+    return factors / torch.max(factors)
 
 
 def get_latent_space_distances(
-    representations, train_representations, factors, metric=None, grad=False
+    representations, train_representations, factors, metric="euclidian", grad=False
 ):
     r"""
     Function that returns the distances between every atoms in a test set (representations)
     and every atoms in a training set (train_representations). The way those distances are 
-    calculated is dependent on the chosen metric (Default is euclidian distance).
-
-    Choices of the metric keyword values:
-
-    euclidian: Uses euclidian distances where every dimension is weighted equally.
-
-    scaled_max: Every dimension is scaled proportionaly to the maximum width in that same
-        dimension between any atoms in the training set.
-
-    scaled_std: Similar to scaled_max, but scaled proportionaly to the standard deviation
-        instead of the maximum.
+    calculated is dependent on the chosen metric.
     """
 
     if grad:

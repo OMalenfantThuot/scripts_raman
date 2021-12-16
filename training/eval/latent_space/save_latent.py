@@ -17,10 +17,21 @@ in a .pt file.
 
 def main(args):
 
+    if args.intermediate and args.output:
+        raise ValueError(
+            """
+            The arguments intermediate and output
+            cannot be used at the same time.
+            """
+        )
+
     device = "cuda" if args.cuda else "cpu"
     model = load_model(args.modelpath, map_location=device)
     name = args.dbpath.split("/")[-1] + "_ls" if args.name is None else args.name
     name = name if name.endswith(".pt") else name + ".pt"
+
+    if args.intermediate:
+        model.representation.return_intermediate = True
 
     with connect(args.dbpath) as db:
         atoms = [row.toatoms() for row in db.select()]
@@ -28,6 +39,10 @@ def main(args):
 
     if args.output == False:
         representations = batch["representation"].cpu()
+    elif args.intermediate:
+        representations = batch["representation"][1]
+        for rep in representations:
+            rep = rep.cpu()
     else:
         representations = batch["output"].cpu()
     torch.save(representations, name)
@@ -51,6 +66,12 @@ def create_parser():
         "--output",
         action="store_true",
         help="Return the output module's latent space instead of the representation block's.",
+    )
+    parser.add_argument(
+        "--intermediate",
+        action="store_true",
+        help="Use to store the intermediate representations.",
+        default=False,
     )
     return parser
 
