@@ -84,3 +84,25 @@ def smooth_loss(rho, property_names):
         return loss
 
     return loss_fn
+
+
+def norm_mask_loss(rho, property_names):
+    def loss_fn(batch, result):
+        loss = 0
+        for prop in rho.keys():
+            if prop == "property":
+                diff = (batch[property_names[prop]] - result[property_names[prop]]) ** 2
+                err = rho[prop] * torch.mean(diff)
+                loss += err
+            elif prop == "derivative":
+                idx = torch.where(result[property_names[prop]] < rho["max_norm"])
+                diff = (
+                    batch[property_names[prop]][idx] - result[property_names[prop]][idx]
+                ) ** 2
+                err = rho[prop] * torch.mean(diff)
+                loss += err
+            else:
+                pass
+        return loss
+
+    return loss_fn

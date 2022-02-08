@@ -5,11 +5,18 @@ def get_loss_fn(args):
     derivative = spk.utils.get_derivative(args)
     contributions = spk.utils.get_contributions(args)
     stress = spk.utils.get_stress(args)
-    if args.loss in ["default", "tilted_up", "tilted_down", "relative_loss", "smooth"]:
+    if args.loss in [
+        "default",
+        "tilted_up",
+        "tilted_down",
+        "relative_loss",
+        "smooth",
+        "masked_norm",
+    ]:
         loss = args.loss
     else:
         raise ValueError("The loss argument is not recognized.")
-    if loss in ["default", "relative_loss", "smooth"]:
+    if loss in ["default", "relative_loss", "smooth", "masked_norm"]:
         # simple loss function for training on property only
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import simple_fn
@@ -18,14 +25,9 @@ def get_loss_fn(args):
 
         # loss function with tradeoff weights
         if type(args.rho) == float:
+            rho = {"property": args.rho, "derivative": 1 - args.rho}
             if loss == "smooth":
-                rho = {
-                    "property": args.rho,
-                    "derivative": 1 - args.rho,
-                    "hessian": 0.0001,
-                }
-            else:
-                rho = {"property": args.rho, "derivative": 1 - args.rho}
+                rho["hessian"] = 0.0001
         else:
             rho = dict()
             rho["property"] = (
@@ -51,7 +53,6 @@ def get_loss_fn(args):
                 rho["hessian"] = (
                     0.0001 if "hessian" not in args.rho.keys() else args.rho["hessian"]
                 )
-
             # type cast of rho values
             for key in rho.keys():
                 rho[key] = float(rho[key])
@@ -59,6 +60,10 @@ def get_loss_fn(args):
             norm = sum(rho.values())
             for key in rho.keys():
                 rho[key] = rho[key] / norm
+
+        if loss == "masked_norm":
+            rho["max_norm"] = float(args.max_norm) if args.max_norm is not None else 5.5
+
         property_names = dict(
             property=args.property,
             derivative=derivative,
@@ -77,6 +82,11 @@ def get_loss_fn(args):
             from utils.functions.schnet_loss import smooth_loss
 
             return smooth_loss(rho, property_names)
+        elif loss == "masked_norm":
+            from utils.functions.schnet_loss import norm_mask_loss
+
+            return norm_mask_loss(rho, property_names)
+
     elif loss == "tilted_down":
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import tilted_down
