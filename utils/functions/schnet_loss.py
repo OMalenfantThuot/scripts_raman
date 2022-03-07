@@ -95,9 +95,13 @@ def norm_mask_loss(rho, property_names):
                 err = rho[prop] * torch.mean(diff)
                 loss += err
             elif prop == "derivative":
-                idx = torch.where(result[property_names[prop]] < rho["max_norm"])
+                idx = torch.where(
+                    torch.linalg.norm(result[property_names[prop]], dim=2)
+                    < rho["max_norm"]
+                )
                 diff = (
-                    batch[property_names[prop]][idx] - result[property_names[prop]][idx]
+                    batch[property_names[prop]][idx[0], idx[1]]
+                    - result[property_names[prop]][idx[0], idx[1]]
                 ) ** 2
                 err = rho[prop] * torch.mean(diff)
                 loss += err
