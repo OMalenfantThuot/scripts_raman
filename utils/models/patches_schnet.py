@@ -1,6 +1,7 @@
 import schnetpack as spk
 import torch
 import torch.nn as nn
+from torch.autograd import grad
 from schnetpack.atomistic import AtomisticModel
 from schnetpack.nn.base import Dense, Aggregate
 from schnetpack.nn.blocks import MLP
