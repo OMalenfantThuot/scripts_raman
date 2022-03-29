@@ -51,7 +51,7 @@ def main(args):
                 db.write(atoms, data={"energy": energy, "forces": forces})
 
         elif args.run_mode == "abinit":
-            files = [f for f in os.listdir() if f.endswith(".out")]
+            files = [f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")]
             for f in files:
                 atoms = read(f, format="abinit-out")
                 about = AbinitOutputFile(f)
