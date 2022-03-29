@@ -11,7 +11,7 @@ from schnetpack import Properties
 
 
 class PatchesAtomisticModel(AtomisticModel):
-    def forward(self, inputs, main_idx):
+    def forward(self, inputs):
         if self.requires_dr:
             inputs[Properties.R].requires_grad_()
         if self.requires_stress:
@@ -20,9 +20,10 @@ class PatchesAtomisticModel(AtomisticModel):
         inputs["representation"] = self.representation(inputs)
         outs = {}
         for output_model in self.output_modules:
-            outs.update(output_model(inputs, main_idx))
+            outs.update(output_model(inputs))
         return outs
-    
+
+
 class PatchesAtomwise(Atomwise):
     def __init__(
         self,
@@ -68,7 +69,7 @@ class PatchesAtomwise(Atomwise):
         else:
             raise NotImplementedError()
 
-    def forward(self, inputs, main_idx):
+    def forward(self, inputs):
         r"""
         predicts atomwise property
         """
@@ -82,10 +83,10 @@ class PatchesAtomwise(Atomwise):
             y0 = self.atomref(atomic_numbers)
             yi = yi + y0
 
-        y = self.atom_pool(yi, main_idx)
+        y = self.atom_pool(yi)
 
         # collect results
-        result = {self.property: y}
+        result = {self.property: y, "individual_" + self.property: yi.squeeze()}
 
         if self.contributions is not None:
             raise NotImplementedError()
@@ -109,11 +110,11 @@ class PatchesAtomwise(Atomwise):
 
 
 class OutputAggregate(Aggregate):
-    def forward(self, inputs, main_idx):
+    def forward(self, inputs):
         # compute sum of input along axis
-        y = torch.sum(inputs[:, main_idx], self.axis)
+        y = torch.sum(inputs, self.axis)
         # compute average of input along axis
         if self.average:
-            N = inputs[:, main_idx].size(self.axis)
+            N = inputs.size(self.axis)
             y = y / N
         return y
