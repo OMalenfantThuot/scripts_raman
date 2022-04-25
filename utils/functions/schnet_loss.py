@@ -44,6 +44,24 @@ def tradeoff_loss_fn(rho, property_names):
     return loss_fn
 
 
+def scaled_loss(rho, property_names):
+    def loss_fn(batch, result):
+        loss = 0
+        for prop in rho.keys():
+            diff = (batch[property_names[prop]] - result[property_names[prop]]) ** 2
+            if prop == "property":
+                err_sq = rho[prop] * torch.mean(diff)
+                loss += err_sq
+            elif prop == "derivative":
+                #weight = 2 / (3 * batch[property_names[prop]] + 1)
+                weight = torch.ones_like(diff)
+                err_sq - rho[prop] * torch.mean(weight * diff)
+                loss += err_sq
+        return loss
+
+    return loss_fn
+
+
 def relative_loss(rho, property_names):
     sig = torch.nn.Sigmoid()
 

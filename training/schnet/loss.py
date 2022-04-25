@@ -12,11 +12,12 @@ def get_loss_fn(args):
         "relative_loss",
         "smooth",
         "masked_norm",
+        "scaled",
     ]:
         loss = args.loss
     else:
         raise ValueError("The loss argument is not recognized.")
-    if loss in ["default", "relative_loss", "smooth", "masked_norm"]:
+    if loss in ["default", "relative_loss", "smooth", "masked_norm", "scaled"]:
         # simple loss function for training on property only
         if derivative is None and contributions is None and stress is None:
             from utils.functions.schnet_loss import simple_fn
@@ -86,6 +87,10 @@ def get_loss_fn(args):
             from utils.functions.schnet_loss import norm_mask_loss
 
             return norm_mask_loss(rho, property_names)
+        elif loss == "scaled":
+            from utils.functions.schnet_loss import scaled_loss
+
+            return scaled_loss(rho, property_names)
 
     elif loss == "tilted_down":
         if derivative is None and contributions is None and stress is None:
