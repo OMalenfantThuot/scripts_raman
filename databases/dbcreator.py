@@ -10,7 +10,7 @@ from ase.io import read
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
 from abipy.abio.outputs import AbinitOutputFile
-from utils.global_variables import DEFAULT_METADATA
+from utils.global_variables import DEFAULT_METADATA, DEFAULT_MD_METADATA
 
 
 def create_parser():
@@ -18,7 +18,7 @@ def create_parser():
     parser.add_argument("dbname", help="Name of the database to create.")
     parser.add_argument(
         "run_mode",
-        choices=["abinit", "bigdft"],
+        choices=["abinit", "bigdft", "md"],
         help="Run mode used when generating the data.",
     )
     return parser
@@ -26,8 +26,8 @@ def create_parser():
 
 def main(args):
     with connect(args.dbname) as db:
-        db.metadata = DEFAULT_METADATA
         if args.run_mode == "bigdft":
+            db.metadata = DEFAULT_METADATA
             files = [f for f in os.listdir() if f.endswith(".xyz")]
             for f in files:
                 atoms = posinp_to_ase_atoms(Posinp.from_file(f))
@@ -51,7 +51,10 @@ def main(args):
                 db.write(atoms, data={"energy": energy, "forces": forces})
 
         elif args.run_mode == "abinit":
-            files = [f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")]
+            db.metadata = DEFAULT_METADATA
+            files = [
+                f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")
+            ]
             for f in files:
                 atoms = read(f, format="abinit-out")
                 about = AbinitOutputFile(f)
@@ -63,6 +66,15 @@ def main(args):
                     * 27.21138602
                     / 0.529177249
                 )
+                db.write(atoms, data={"energy": energy, "forces": forces})
+
+        elif args.run_mode == "md":
+            db.metadata = DEFAULT_MD_METADATA
+            files = [f for f in os.listdir() if f.endswith(".xyz")]
+            for i, f in enumerate(files):
+                atoms = read(f, format="extxyz")
+                energy = atoms.get_total_energy()
+                forces = atoms.get_forces()
                 db.write(atoms, data={"energy": energy, "forces": forces})
 
 
