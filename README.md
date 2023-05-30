@@ -9,7 +9,9 @@
 
 Python 3, numpy, scipy
 
-Python package [My\_BigDFT](https://github.com/OMalenfantThuot/My_BigDFT) must be installed.
+Python package [My\_BigDFT](https://github.com/OMalenfantThuot/My_BigDFT) must be installed to use this package for DFT calculations.
+
+The machine learning scripts don't need it.
 
 ## Meta
 
