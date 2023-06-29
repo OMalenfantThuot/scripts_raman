@@ -9,7 +9,6 @@ from ase.db import connect
 from ase.io import read
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
-from abipy.abio.outputs import AbinitOutputFile
 from utils.global_variables import DEFAULT_METADATA, DEFAULT_MD_METADATA
 
 
@@ -21,7 +20,15 @@ def create_parser():
         choices=["abinit", "bigdft", "md", "radnet"],
         help="Run mode used when generating the data.",
     )
-    parser.add_argument("--h5group", default=None, help="Name of the h5 group. Only for radnet.")
+    parser.add_argument(
+        "--h5group", default=None, help="Name of the h5 group. Only for radnet."
+    )
+    parser.add_argument(
+        "--target",
+        choices=["dielectric", "polarization"],
+        default=None,
+        help="Only for radnet",
+    )
     return parser
 
 
@@ -45,7 +52,9 @@ def main(args):
                                     forces.append(
                                         [
                                             float(force)
-                                            for force in posinp_file.readline().split()[-3:]
+                                            for force in posinp_file.readline().split()[
+                                                -3:
+                                            ]
                                         ]
                                     )
                                 forces = np.array(forces) * 27.21138602 / 0.529177249
@@ -80,18 +89,67 @@ def main(args):
                     db.write(atoms, data={"energy": energy, "forces": forces})
 
     elif args.run_mode in ["radnet"]:
+        assert args.target is not None
+        from abipy.abio.outputs import AbinitOutputFile
+        import h5py
+
         h5FileName = args.dbname if args.dbname.endswith(".h5") else args.dbname + ".h5"
-        with h5py.File(h5FileName, "w") as f:
-            files = [
-                f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")
-            ]
-            for f in files:
+        with h5py.File(h5FileName, "w") as outfile:
+            files = sorted(
+                [f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")]
+            )
+            ref = read(files[0], format="abinit-out")
+            natoms = len(ref)
+            atomic_numbers = ref.get_atomic_numbers()
+            cell = ref.cell.array
+
+            coordinates = np.empty((len(files), natoms, 3))
+            dielectric = np.empty((len(files), 3, 3))
+            polarization = np.empty((len(files), 3))
+
+            for i, f in enumerate(files):
                 atoms = read(f, format="abinit-out")
+                coordinates[i] = atoms.get_positions()
+
                 about = AbinitOutputFile(f)
 
+                die_data = about.datasets[3].split("\n")
+                for j, line in enumerate(die_data):
+                    if "Dielectric" in line:
+                        die_results_idx = j
 
+                die_values = []
+                for offset in [4, 5, 6, 8, 9, 10, 12, 13, 14]:
+                    die_values.append(die_data[die_results_idx + offset].split()[4])
+                dielectric[i] = np.array(die_values).reshape(3, 3)
 
+                pol_data = about.datasets[4].split("\n")
+                for j, line in enumerate(pol_data):
+                    if "Polarization in cartesian coordinates (a.u.)" in line:
+                        pol_results_idx = j
+                pol_values = np.array(
+                    [float(v) for v in pol_data[pol_results_idx + 4].split()[1:]]
+                )
+                polarization[i] = pol_values
 
+            if args.target == "polarization":
+                target = polarization
+            elif args.target == "dielectric":
+                target = np.empty((len(files), 6))
+                target[:, 0] = dielectric[:, 0, 0]
+                target[:, 1] = dielectric[:, 0, 1]
+                target[:, 2] = dielectric[:, 0, 2]
+                target[:, 3] = dielectric[:, 1, 1]
+                target[:, 4] = dielectric[:, 1, 2]
+                target[:, 5] = dielectric[:, 2, 2]
+
+            group = outfile.create_group(args.h5group)
+            group.create_dataset("atomic_numbers", data=atomic_numbers)
+            group.create_dataset("cell", data=cell)
+            group.create_dataset("coordinates", data=coordinates)
+            group.create_dataset("dielectric", data=dielectric)
+            group.create_dataset("polarization", data=polarization)
+            group.create_dataset("target", data=target)
 
 
 if __name__ == "__main__":
