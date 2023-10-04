@@ -12,12 +12,14 @@ from schnetpack.utils import (
 
 def get_model(args, train_loader, mean, stddev, atomref, logging=None):
     if args.mode == "train":
+        from schnetpack.utils import get_representation
+
+        representation = get_representation(args, train_loader)
         if logging:
             logging.info("building model...")
-        if args.dropout == 0 and args.n_layers == 2:
-            from schnetpack.utils import get_representation, get_output_module
+        if args.dropout == 0 and args.n_layers == 2 and args.output_dim == 1:
+            from schnetpack.utils import get_output_module
 
-            representation = get_representation(args, train_loader)
             output_module = get_output_module(
                 args,
                 representation=representation,
@@ -25,15 +27,21 @@ def get_model(args, train_loader, mean, stddev, atomref, logging=None):
                 stddev=stddev,
                 atomref=atomref,
             )
-        else:
-            from schnetpack.utils import get_representation #get_output_module# get_representation
+        elif args.output_module == "atomwise" and args.output_dim > 1:
+            assert (
+                args.dropout == 0
+            ), "Dropout not implemented for atomwise with output_dim > 1."
 
-            representation = get_representation(args, train_loader)
-#            representation = get_rep_with_dropout(args, train_loader)
-#            output_module = get_output_module(
+            output_module = get_output_module_with_dim(
+                args,
+                mean=mean,
+                stddev=stddev,
+                atomref=atomref,
+            )
+
+        else:
             output_module = get_outmod_with_dropout(
                 args,
-                representation=representation,
                 mean=mean,
                 stddev=stddev,
                 atomref=atomref,
@@ -64,7 +72,7 @@ def get_rep_with_dropout(args, train_loader):
     )
 
 
-def get_outmod_with_dropout(args, representation, mean, stddev, atomref):
+def get_outmod_with_dropout(args, mean, stddev, atomref):
     derivative = spk.utils.get_derivative(args)
     negative_dr = spk.utils.get_negative_dr(args)
     contributions = spk.utils.get_contributions(args)
@@ -83,4 +91,26 @@ def get_outmod_with_dropout(args, representation, mean, stddev, atomref):
         stress=stress,
         dropout=args.dropout,
         n_layers=args.n_layers,
+    )
+
+
+def get_output_module_with_dim(args, mean, stddev, atomref):
+    derivative = spk.utils.get_derivative(args)
+    negative_dr = spk.utils.get_negative_dr(args)
+    contributions = spk.utils.get_contributions(args)
+    stress = spk.utils.get_stress(args)
+
+    return spk.atomistic.output_modules.Atomwise(
+        args.features,
+        n_out=args.output_dim,
+        aggregation_mode=spk.utils.get_pooling_mode(args),
+        n_layers=args.n_layers,
+        property=args.property,
+        contributions=contributions,
+        derivative=derivative,
+        negative_dr=negative_dr,
+        stress=stress,
+        mean=mean[args.property],
+        stddev=stddev[args.property],
+        atomref=atomref[args.property],
     )
