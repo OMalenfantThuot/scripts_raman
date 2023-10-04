@@ -66,7 +66,17 @@ def main(args):
                 db.write(
                     atom,
                     data={
-                        "dielectric": atom.info["dielectric"],
+                        "dielectric_full": atom.info["dielectric"].reshape(3, 3),
+                        "dielectric_reduced": np.array(
+                            [
+                                atom.info["dielectric"][0],
+                                atom.info["dielectric"][1],
+                                atom.info["dielectric"][2],
+                                atom.info["dielectric"][4],
+                                atom.info["dielectric"][5],
+                                atom.info["dielectric"][8],
+                            ]
+                        ),
                         "polarization": atom.info["polarization"],
                     },
                 )
