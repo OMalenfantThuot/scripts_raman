@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 from ase.db import connect
 from ase.io import read
+from ase.units import Bohr
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
 from utils.global_variables import DEFAULT_METADATA, DEFAULT_MD_METADATA
@@ -124,13 +125,23 @@ def main(args):
                 dielectric[i] = np.array(die_values).reshape(3, 3)
 
                 pol_data = about.datasets[4].split("\n")
+                if i == 0:
+                    au_cell = atoms.cell / Bohr
+                    au_volume = atoms.cell.volume / (Bohr**3)
+
+                idx_list = []
                 for j, line in enumerate(pol_data):
-                    if "Polarization in cartesian coordinates (a.u.)" in line:
-                        pol_results_idx = j
-                pol_values = np.array(
-                    [float(v) for v in pol_data[pol_results_idx + 4].split()[1:]]
-                )
-                polarization[i] = pol_values
+                    if "Electronic Berry phase" in line:
+                        idx_list.append(j)
+
+                pol_values = []
+                for idx in idx_list:
+                    p_elec = float(pol_data[idx].split()[3])
+                    p_ion = float(pol_data[idx + 1].split()[2])
+                    p_ion = 2 + p_ion if p_ion < 0 else p_ion
+                    pol_values.append((p_elec + p_ion))
+                pol_values = np.broadcast_to(np.array(pol_values), (3, 3)).T
+                polarization[i] = (pol_values * au_cell).sum(0) / au_volume
 
             if args.target == "polarization":
                 target = polarization
