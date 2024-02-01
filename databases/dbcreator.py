@@ -1,12 +1,14 @@
 #! /usr/bin/env python
 
-import os
-import ase
-import sys
 import argparse
+import ase
 import numpy as np
+import os
+import random
+import sys
 from ase.db import connect
 from ase.io import read
+from ase.units import Bohr
 from mlcalcdriver import Posinp
 from mlcalcdriver.interfaces import posinp_to_ase_atoms
 from utils.global_variables import DEFAULT_METADATA, DEFAULT_MD_METADATA
@@ -28,6 +30,12 @@ def create_parser():
         choices=["dielectric", "polarization"],
         default=None,
         help="Only for radnet",
+    )
+    parser.add_argument(
+        "--n_equil",
+        type=int,
+        default=0,
+        help="Number of time the equilibrium structure is added to the dataset.",
     )
     return parser
 
@@ -62,6 +70,8 @@ def main(args):
                     db.write(atoms, data={"energy": energy, "forces": forces})
 
             elif args.run_mode == "abinit":
+                from abipy.abio.outputs import AbinitOutputFile
+
                 db.metadata = DEFAULT_METADATA
                 files = [
                     f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")
@@ -98,21 +108,39 @@ def main(args):
             files = sorted(
                 [f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")]
             )
+
+            # Adding equilibrium structure multiple times
+            if args.n_equil > 0:
+                if os.path.exists("equil.out"):
+                    for _ in range(args.n_equil - 1):
+                        files.append("equil.out")
+                    random.shuffle(files)  # Useful if we split the database later on
+                else:
+                    raise FileNotFoundError(
+                        "The equilibrium positions should be in 'equil.out'."
+                    )
+
+            # Get common values between structures
             ref = read(files[0], format="abinit-out")
             natoms = len(ref)
             atomic_numbers = ref.get_atomic_numbers()
-            cell = ref.cell.array
+            cell = ref.cell
+            au_cell = cell / Bohr
+            au_volume = cell.volume / (Bohr**3)
 
+            # Prepare arrays
             coordinates = np.empty((len(files), natoms, 3))
             dielectric = np.empty((len(files), 3, 3))
             polarization = np.empty((len(files), 3))
 
+            # Loop on output files
             for i, f in enumerate(files):
                 atoms = read(f, format="abinit-out")
                 coordinates[i] = atoms.get_positions()
 
                 about = AbinitOutputFile(f)
 
+                # Read dielectric values
                 die_data = about.datasets[3].split("\n")
                 for j, line in enumerate(die_data):
                     if "Dielectric" in line:
@@ -123,15 +151,24 @@ def main(args):
                     die_values.append(die_data[die_results_idx + offset].split()[4])
                 dielectric[i] = np.array(die_values).reshape(3, 3)
 
+                # Read polarization values
                 pol_data = about.datasets[4].split("\n")
+                idx_list = []
                 for j, line in enumerate(pol_data):
-                    if "Polarization in cartesian coordinates (a.u.)" in line:
-                        pol_results_idx = j
-                pol_values = np.array(
-                    [float(v) for v in pol_data[pol_results_idx + 4].split()[1:]]
-                )
-                polarization[i] = pol_values
+                    if "Electronic Berry phase" in line:
+                        idx_list.append(j)
 
+                # Unfold Berry phase to get continuous distribution
+                pol_values = []
+                for idx in idx_list:
+                    p_elec = float(pol_data[idx].split()[3])
+                    p_ion = float(pol_data[idx + 1].split()[2])
+                    p_ion = 2 + p_ion if p_ion < 0 else p_ion
+                    pol_values.append((p_elec + p_ion))
+                pol_values = np.broadcast_to(np.array(pol_values), (3, 3)).T
+                polarization[i] = (pol_values * au_cell).sum(0) / au_volume
+
+            # Save targets
             if args.target == "polarization":
                 target = polarization
             elif args.target == "dielectric":
@@ -143,9 +180,10 @@ def main(args):
                 target[:, 4] = dielectric[:, 1, 2]
                 target[:, 5] = dielectric[:, 2, 2]
 
+            # Final write
             group = outfile.create_group(args.h5group)
             group.create_dataset("atomic_numbers", data=atomic_numbers)
-            group.create_dataset("cell", data=cell)
+            group.create_dataset("cell", data=cell.array)
             group.create_dataset("coordinates", data=coordinates)
             group.create_dataset("dielectric", data=dielectric)
             group.create_dataset("polarization", data=polarization)

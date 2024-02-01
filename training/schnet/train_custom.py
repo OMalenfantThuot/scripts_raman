@@ -25,7 +25,6 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 
 def main(args):
-
     # setup
     train_args = setup_run(args)
 
@@ -38,6 +37,8 @@ def main(args):
         args.__dict__.update({"n_layers": 2})
     if not hasattr(args, "normalize_filter"):
         args.__dict__.update({"normalize_filter": False})
+    if not hasattr(args, "output_dim"):
+        args.__dict__.update({"output_dim": 1})
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
@@ -56,7 +57,6 @@ def main(args):
 
     # train or evaluate
     if args.mode == "train":
-
         # get statistics
         atomref = dataset.get_atomref(args.property)
         mean, stddev = get_statistics(
