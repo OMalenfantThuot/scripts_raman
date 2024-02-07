@@ -76,6 +76,16 @@ def main(args):
                 files = [
                     f for f in os.listdir() if f.endswith(".out") or f.endswith(".abo")
                 ]
+                if args.n_equil > 0:
+                    if os.path.exists("equil.out"):
+                        for _ in range(args.n_equil - 1):
+                            files.append("equil.out")
+                        random.shuffle(files)
+                    else:
+                        raise FileNotFoundError(
+                            "The equilibrium positions should be in 'equil.out'."
+                        )
+
                 for f in files:
                     atoms = read(f, format="abinit-out")
                     about = AbinitOutputFile(f)
