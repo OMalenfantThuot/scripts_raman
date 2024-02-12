@@ -28,6 +28,21 @@ def graphene_schnet_memory_estimation_per_atom(
         )
 
 
+def graphene_max_atoms_per_patch_forces(
+    n_interactions: int, cutoff: float, n_neurons: int
+):
+    device_name = torch.cuda.get_device_name()
+
+    if device_name == "Tesla V100-SXM2-16GB":
+        if n_interactions == 2:
+            if cutoff == 7 and n_neurons == 256:
+                return 11250
+    raise NotImplementedError(
+        f"The maximum number of atoms is not know for the device {device_name}"
+        f"with {n_interactions} interaction blocks, {cutoff} cutoff and {n_neurons} neurons."
+    )
+
+
 def graphene_max_atoms_per_patch_hessian(
     n_interactions: int, cutoff: float, n_neurons: int
 ):
@@ -37,12 +52,14 @@ def graphene_max_atoms_per_patch_hessian(
         if n_interactions == 2:
             if cutoff == 6 and n_neurons == 128:
                 return 12800
+            elif cutoff == 7 and n_neurons == 256:
+                return 6728
         elif n_interactions == 3:
             if cutoff == 6:
                 if n_neurons == 128:
                     return 9800
                 elif n_neurons == 64:
-                    return 8712 # relance
+                    return 8712  # relance
                 elif n_neurons == 256:
                     return 5202
             if cutoff == 5 and n_neurons == 128:
@@ -63,21 +80,34 @@ def graphene_max_atoms_per_patch_hessian(
 
 
 def get_graphene_patches_grid(
-    mem_per_atom, interactions, cutoff, supercell_size_x, supercell_size_y
+    pred: str,
+    n_interactions: int,
+    cutoff: float,
+    n_neurons: int,
+    supercell_size_x: int,
+    supercell_size_y: int,
 ):
-    # total_gpu_mem = torch.cuda.get_device_properties(0).total_memory / (1024 ** 2)
-    total_gpu_mem = 30000
-    if supercell_size_x * supercell_size_y * 2 * mem_per_atom < total_gpu_mem:
+    n_atoms_supercell = supercell_size_x * supercell_size_y * 2
+    if pred == "hessian":
+        max_atoms_per_patch = graphene_max_atoms_per_patch_hessian(
+            n_interactions, cutoff, n_neurons
+        )
+    elif pred == "forces":
+        max_atoms_per_patch = graphene_max_atoms_per_patch_forces(
+            n_interactions, cutoff, n_neurons
+        )
+    else:
+        raise RuntimeError("Prediction not recognized.")
+
+    if n_atoms_supercell < max_atoms_per_patch:
         return np.array([1, 1, 1])
     else:
-        target_num_atoms = int(0.95 * total_gpu_mem / mem_per_atom)
-        print(target_num_atoms)
+        target_num_atoms = int(0.95 * max_atoms_per_patch)
         prim_len = 2.46738
-
-        buffer = (interactions * cutoff) / np.sin(np.radians(60)) / prim_len
+        buffer_width = (n_interactions * cutoff) / (prim_len * np.sin(np.radians(60)))
 
         new_x, new_y = 1, 1
-        full_num_atoms = target_num_atoms * 2
+        full_num_atoms = target_num_atoms * 2  # Random initialisation
 
         while full_num_atoms > target_num_atoms:
             if supercell_size_x / new_x >= supercell_size_y / new_y:
@@ -94,9 +124,13 @@ def get_graphene_patches_grid(
                 (supercell_size_x / new_x) * (supercell_size_y / new_y) * 2
             )
             full_area = (
-                (supercell_size_x / new_x + 2 * buffer)
-                * (supercell_size_y / new_y + 2 * buffer)
+                (supercell_size_x / new_x + 2 * buffer_width)
+                * (supercell_size_y / new_y + 2 * buffer_width)
                 * np.sin(np.radians(60))
             )
             full_num_atoms = patches_num_atoms * full_area / patches_area
-        return np.array([new_x, new_y, 1])
+
+        grid = np.array([new_x, new_y, 1])
+        if pred == "hessian":
+            grid[grid == 2] += 1
+        return grid
