@@ -37,6 +37,12 @@ def create_parser():
         default=0,
         help="Number of time the equilibrium structure is added to the dataset.",
     )
+    parser.add_argument(
+        "--n_relaxed",
+        type=int,
+        default=0,
+        help="Number of time the relaxation structures are added to the dataset.",
+    )
     return parser
 
 
@@ -85,6 +91,25 @@ def main(args):
                         raise FileNotFoundError(
                             "The equilibrium positions should be in 'equil.out'."
                         )
+                if args.n_relaxed > 0:
+                    relaxed_files = [
+                        f
+                        for f in os.listdir()
+                        if f.startswith("relax") and f.endswith(".xyz")
+                    ]
+                    if len(relaxed_files) == 0:
+                        raise FileNotFoundError(
+                            "The relaxation positions should be given in relax_X.xyz files."
+                        )
+                    else:
+                        for rf in relaxed_files:
+                            atoms = read(rf, format="extxyz")
+                            energy = atoms.info["energy"]
+                            forces = atoms.info["forces"]
+                            for _ in range(args.n_relaxed):
+                                db.write(
+                                    atoms, data={"energy": energy, "forces": forces}
+                                )
 
                 for f in files:
                     atoms = read(f, format="abinit-out")
