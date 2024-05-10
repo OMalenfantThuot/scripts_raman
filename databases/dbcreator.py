@@ -149,12 +149,12 @@ def main(args):
                 if os.path.exists("equil.out"):
                     for _ in range(args.n_equil - 1):
                         files.append("equil.out")
-                    random.shuffle(files)  # Useful if we split the database later on
                 else:
                     raise FileNotFoundError(
                         "The equilibrium positions should be in 'equil.out'."
                     )
 
+            random.shuffle(files)  # Useful if we split the database later on
             # Get common values between structures
             ref = read(files[0], format="abinit-out")
             natoms = len(ref)
@@ -167,6 +167,7 @@ def main(args):
             coordinates = np.empty((len(files), natoms, 3))
             dielectric = np.empty((len(files), 3, 3))
             polarization = np.empty((len(files), 3))
+            polarization_phases = np.empty((len(files), 3))
 
             # Loop on output files
             for i, f in enumerate(files):
@@ -200,6 +201,7 @@ def main(args):
                     p_ion = float(pol_data[idx + 1].split()[2])
                     p_ion = 2 + p_ion if p_ion < 0 else p_ion
                     pol_values.append((p_elec + p_ion))
+                polarization_phases[i] = np.array(pol_values)
                 pol_values = np.broadcast_to(np.array(pol_values), (3, 3)).T
                 polarization[i] = (pol_values * au_cell).sum(0) / au_volume
 
@@ -222,6 +224,7 @@ def main(args):
             group.create_dataset("coordinates", data=coordinates)
             group.create_dataset("dielectric", data=dielectric)
             group.create_dataset("polarization", data=polarization)
+            group.create_dataset("polarization_phases", data=polarization_phases)
             group.create_dataset("target", data=target)
 
 
