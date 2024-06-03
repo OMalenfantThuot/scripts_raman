@@ -1,5 +1,15 @@
 import torch
 import numpy as np
+from schnetpack.utils import load_model
+
+
+def get_schnet_hyperparams(model):
+    temp_model = load_model(model, map_location="cpu")
+    n_neurons = temp_model.representation.embedding.weight.shape[1]
+    n_interactions = len(temp_model.representation.interactions)
+    cutoff = float(temp_model.representation.interactions[0].cutoff_network.cutoff)
+    del temp_model
+    return n_neurons, n_interactions, cutoff
 
 
 def schnet_memory_estimation_for_graphene(
@@ -16,15 +26,11 @@ def graphene_schnet_memory_estimation_per_atom(
 
     if (cutoff == np.array([5, 6])).any():
         return (
-            0.022
-            + 3.4e-4 * n_neurons
-            + 2.8e-5 * n_neurons * n_interactions * cutoff**2
+            0.022 + 3.4e-4 * n_neurons + 2.8e-5 * n_neurons * n_interactions * cutoff**2
         )
     elif cutoff == 7:
         return (
-            0.022
-            + 7.4e-4 * n_neurons
-            + 2.8e-5 * n_neurons * n_interactions * cutoff**2
+            0.022 + 7.4e-4 * n_neurons + 2.8e-5 * n_neurons * n_interactions * cutoff**2
         )
 
 
